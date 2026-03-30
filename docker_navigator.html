@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker Navigator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #060d18;
+  --surface: #0c1525;
+  --surface2: #111d2e;
+  --border: #1a3050;
+  --whale: #0db7ed;
+  --whale2: #086da1;
+  --cyan: #00e5ff;
+  --green: #00e676;
+  --amber: #ffd740;
+  --red: #ff5252;
+  --purple: #b388ff;
+  --muted: #2a5080;
+  --text: #cce8f4;
+  --dim: #1a4060;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background:
+    radial-gradient(ellipse 60% 30% at 80% 5%, rgba(13,183,237,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 10% 80%, rgba(0,229,255,0.04) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+/* hex grid bg */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: radial-gradient(circle, rgba(13,183,237,0.08) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none; z-index: 0;
+  opacity: 0.4;
+}
+
+.wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+/* ── HEADER ── */
+header { padding: 40px 0 0; }
+
+.header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.logo-area { display: flex; align-items: center; gap: 16px; }
+
+.whale-icon {
+  width: 56px; height: 56px;
+  background: linear-gradient(135deg, var(--whale), var(--whale2));
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  box-shadow: 0 0 30px rgba(13,183,237,0.4);
+}
+
+.logo-text h1 { font-size: 28px; font-weight: 700; color: var(--whale); letter-spacing: -0.5px; }
+.logo-text p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+.status-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid;
+  display: flex; align-items: center; gap: 6px;
+}
+.chip::before { content: '●'; font-size: 8px; }
+.chip-run { color: var(--green); border-color: rgba(0,230,118,0.3); background: rgba(0,230,118,0.07); }
+.chip-img { color: var(--whale); border-color: rgba(13,183,237,0.3); background: rgba(13,183,237,0.07); }
+.chip-vol { color: var(--purple); border-color: rgba(179,136,255,0.3); background: rgba(179,136,255,0.07); }
+
+.hero-desc { font-size: 14px; color: var(--muted); line-height: 1.7; max-width: 580px; margin-bottom: 8px; }
+.hero-desc strong { color: var(--cyan); }
+.host-note {
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  color: var(--dim);
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+/* ── TABS ── */
+.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin: 0; padding-bottom: 0; }
+.tab {
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  padding: 10px 18px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+  position: relative; bottom: -1px;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  background: var(--surface);
+  border-color: var(--border);
+  border-bottom-color: var(--surface);
+  color: var(--whale);
+}
+
+/* ── PANELS ── */
+.panel { display: none; padding: 28px 0; }
+.panel.active { display: block; }
+
+/* ── SECTION HEADERS ── */
+.sec-h {
+  display: flex; align-items: center; gap: 12px;
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.sec-h .sec-icon { font-size: 16px; }
+.sec-h::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── CONCEPT CARDS ── */
+.concept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-bottom: 32px; }
+
+.c-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.c-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: var(--card-top, var(--whale));
+}
+.c-card:hover {
+  border-color: var(--card-top, var(--whale));
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(13,183,237,0.12);
+}
+.c-card.done { opacity: 0.5; }
+.c-card.done::after {
+  content: 'DONE ✓';
+  position: absolute; top: 12px; right: 14px;
+  font-family: 'Fira Code', monospace;
+  font-size: 9px; color: var(--green);
+}
+
+.c-icon { font-size: 26px; margin-bottom: 10px; }
+.c-title { font-weight: 700; font-size: 14px; color: var(--whale); margin-bottom: 5px; }
+.c-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.c-level {
+  margin-top: 12px;
+  font-family: 'Fira Code', monospace;
+  font-size: 9px;
+  display: flex; gap: 3px;
+}
+.c-level span {
+  width: 16px; height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+.c-level span.filled { background: var(--card-top, var(--whale)); }
+
+/* ── DETAIL ── */
+.detail {
+  background: var(--surface);
+  border: 1px solid var(--whale);
+  border-radius: 12px;
+  padding: 28px;
+  margin-bottom: 28px;
+  animation: rise 0.2s ease;
+  box-shadow: 0 0 60px rgba(13,183,237,0.08);
+}
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.d-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.d-title { font-size: 22px; font-weight: 700; color: var(--whale); display: flex; align-items: center; gap: 10px; }
+.d-close {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); width: 28px; height: 28px;
+  border-radius: 6px; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.d-close:hover { background: var(--red); color: white; border-color: var(--red); }
+
+.d-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 640px) { .d-grid { grid-template-columns: 1fr; } }
+
+.d-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+}
+.d-block h4 {
+  font-family: 'Fira Code', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.d-block p { font-size: 13px; line-height: 1.7; }
+
+.d-full { grid-column: 1 / -1; }
+.d-analogy { background: rgba(13,183,237,0.05); border-color: rgba(13,183,237,0.25); }
+.d-analogy h4 { color: var(--whale); }
+.d-paper { background: rgba(0,229,255,0.04); border-color: rgba(0,229,255,0.2); }
+.d-paper h4 { color: var(--cyan); }
+
+.code-block {
+  background: #030a12;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.9;
+  overflow-x: auto;
+}
+.comment { color: var(--dim); }
+.cmd-line { color: var(--text); }
+.cmd-line::before { content: '$ '; color: var(--whale); }
+.keyword { color: var(--amber); }
+.string-val { color: var(--green); }
+.output-line { color: var(--muted); padding-left: 14px; }
+.output-line::before { content: '> '; }
+
+/* Container visual */
+.container-viz {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  background: #030a12;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+}
+.cv-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.cv-box {
+  padding: 6px 12px;
+  border: 1px solid;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.cv-host { border-color: rgba(0,229,255,0.5); color: var(--cyan); background: rgba(0,229,255,0.06); }
+.cv-container { border-color: rgba(13,183,237,0.6); color: var(--whale); background: rgba(13,183,237,0.08); }
+.cv-image { border-color: rgba(0,230,118,0.5); color: var(--green); background: rgba(0,230,118,0.06); }
+.cv-volume { border-color: rgba(179,136,255,0.5); color: var(--purple); background: rgba(179,136,255,0.06); }
+.cv-label { color: var(--dim); font-size: 10px; align-self: center; }
+.cv-arrow { color: var(--muted); align-self: center; }
+
+.mark-btn {
+  margin-top: 18px;
+  padding: 9px 20px;
+  background: transparent;
+  border: 1px solid var(--whale);
+  color: var(--whale);
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+.mark-btn:hover { background: var(--whale); color: var(--bg); }
+
+/* ── PATH ── */
+.path-item {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 16px;
+  align-items: start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.path-item:hover { border-color: var(--whale); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(13,183,237,0.1); }
+.path-num {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--whale), var(--whale2));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fira Code', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+.path-item h4 { font-size: 14px; font-weight: 700; color: var(--whale); margin-bottom: 6px; }
+.path-item p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.path-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.path-tag { font-family: 'Fira Code', monospace; font-size: 10px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 3px; color: var(--dim); }
+.path-dur { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--dim); white-space: nowrap; }
+
+/* ── PROGRESS ── */
+.prog-outer { height: 4px; background: var(--border); border-radius: 2px; margin: 16px 0 6px; }
+.prog-inner { height: 100%; background: linear-gradient(90deg, var(--whale), var(--cyan)); border-radius: 2px; transition: width 0.5s; }
+.prog-lbl { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--muted); }
+
+/* ── CHEAT ── */
+.cheat-sec { margin-bottom: 28px; }
+.cheat-sec h3 { font-family: 'Fira Code', monospace; font-size: 13px; color: var(--whale); margin-bottom: 12px; border-left: 3px solid var(--whale); padding-left: 10px; }
+.cheat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px; }
+.cheat-row {
+  display: flex; align-items: baseline; gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  transition: border-color 0.15s;
+}
+.cheat-row:hover { border-color: var(--whale2); }
+.cheat-cmd { font-family: 'Fira Code', monospace; font-size: 11px; color: var(--amber); flex-shrink: 0; }
+.cheat-what { font-size: 12px; color: var(--muted); }
+
+/* ── DOCKERFILE EXPLAINER ── */
+.dockerfile-block {
+  background: #030a12;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 2;
+}
+.df-instruction { color: var(--amber); }
+.df-arg { color: var(--green); }
+.df-comment { color: var(--dim); }
+.df-tooltip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 4px 0 10px 20px;
+  font-size: 11px;
+  color: var(--muted);
+  border-left: 2px solid var(--whale);
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="header-top">
+    <div class="logo-area">
+      <div class="whale-icon">🐳</div>
+      <div class="logo-text">
+        <h1>Docker Navigator</h1>
+        <p>Containers, images, and shipping code reliably</p>
+      </div>
+    </div>
+    <div class="status-chips">
+      <span class="chip chip-run">containers</span>
+      <span class="chip chip-img">images</span>
+      <span class="chip chip-vol">volumes</span>
+    </div>
+  </div>
+  <p class="hero-desc">From <strong>"works on my machine"</strong> → works everywhere. Docker packages your app + its environment into a single portable unit. This is how AI/ML teams ship models.</p>
+  <div class="host-note">💡 Host free: GitHub Pages · Netlify (drag &amp; drop) · Vercel · any static host</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('concepts',this)">concepts/</button>
+    <button class="tab" onclick="switchTab('dockerfile',this)">dockerfile/</button>
+    <button class="tab" onclick="switchTab('path',this)">path/</button>
+    <button class="tab" onclick="switchTab('cheat',this)">cheatsheet/</button>
+  </div>
+</header>
+
+<!-- CONCEPTS -->
+<div class="panel active" id="tab-concepts">
+  <div id="detail-zone"></div>
+
+  <div class="sec-h"><span class="sec-icon">🧱</span>Core Concepts — Start Here</div>
+  <div class="concept-grid" id="layer-core"></div>
+
+  <div class="sec-h"><span class="sec-icon">🚢</span>Running Containers</div>
+  <div class="concept-grid" id="layer-run"></div>
+
+  <div class="sec-h"><span class="sec-icon">🏗️</span>Building Images</div>
+  <div class="concept-grid" id="layer-build"></div>
+
+  <div class="sec-h"><span class="sec-icon">🌐</span>Networking, Volumes & Compose</div>
+  <div class="concept-grid" id="layer-advanced"></div>
+
+  <div class="sec-h"><span class="sec-icon">🤖</span>Docker for AI/ML</div>
+  <div class="concept-grid" id="layer-ml"></div>
+</div>
+
+<!-- DOCKERFILE -->
+<div class="panel" id="tab-dockerfile">
+  <div class="sec-h"><span class="sec-icon">📄</span>Dockerfile Anatomy</div>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.7">A Dockerfile is a recipe for building a Docker image. Every line is an instruction. Each creates a new layer in the image. Understanding this is key to writing efficient, cacheable Dockerfiles.</p>
+  <div id="dockerfile-content"></div>
+</div>
+
+<!-- PATH -->
+<div class="panel" id="tab-path">
+  <div class="sec-h"><span class="sec-icon">🗺️</span>Learning Path</div>
+  <div>
+    <div class="prog-outer"><div class="prog-inner" id="prog-bar" style="width:0%"></div></div>
+    <div class="prog-lbl" id="prog-lbl">0 / 0 concepts learned</div>
+  </div>
+  <div id="path-list" style="margin-top: 24px;"></div>
+</div>
+
+<!-- CHEAT -->
+<div class="panel" id="tab-cheat">
+  <div class="sec-h"><span class="sec-icon">⚡</span>Cheat Sheet</div>
+  <div id="cheat-content"></div>
+</div>
+</div>
+
+<script>
+const concepts = {
+  // CORE
+  what_is_docker: {
+    layer: 'core', icon: '🐳', title: 'What is Docker?', desc: 'Packages your app + its entire environment into a portable box', level: 1, color: 'var(--whale)',
+    analogy: 'Imagine a shipping container. Before containers, docks were chaos — every ship packed cargo differently. Standard shipping containers changed everything: one standard box, works on any ship, truck, or crane worldwide. Docker does this for software. Your app + its Python version + its libraries + its config = one standard container. It runs identically on your laptop, your teammate\'s Mac, a Linux server, or AWS.',
+    intuition: 'The "works on my machine" problem is real and painful. Docker eliminates it. When you containerize an app, you freeze not just the code but the entire environment it needs. Ship the container, not just the code.',
+    code: `# Install Docker Desktop (download from docker.com)
+
+# Check it's working
+docker --version
+docker run hello-world
+
+# The hello-world output tells you:
+# 1. Docker CLI talked to Docker daemon
+# 2. Daemon pulled image from Docker Hub
+# 3. Container ran, printed message, exited`,
+    viz_type: 'container',
+    viz: ['Your App Code', '→', 'Python 3.11', '→', 'Libraries', '→', 'Docker Image', '→', 'Runs Anywhere'],
+    why: 'Docker is used in every professional AI/ML workflow. Model serving, training pipelines, reproducible research — containers are the standard unit of deployment.'
+  },
+  image_vs_container: {
+    layer: 'core', icon: '📦', title: 'Images vs Containers', desc: 'The most important distinction in Docker', level: 1, color: 'var(--whale)',
+    analogy: 'An image is a cookie cutter. A container is a cookie. You use one cookie cutter to make many cookies, each independent. Or: an image is a class in Python (the blueprint). A container is an instance (the actual object running in memory). Images are read-only snapshots. Containers are running instances of images. You can have 100 containers from one image, all isolated from each other.',
+    intuition: 'docker build creates an image. docker run creates a container from an image. Images are stored and versioned. Containers are ephemeral (start, run, stop, optionally delete). This separation is what makes Docker powerful.',
+    code: `# List images you have locally
+docker images
+# or: docker image ls
+
+# List running containers
+docker ps
+
+# List ALL containers (including stopped)
+docker ps -a
+
+# Run = create a container from an image
+docker run nginx  # creates + starts nginx container
+
+# Stop and remove a container
+docker stop <container-id>
+docker rm <container-id>`,
+    viz_type: 'boxes',
+    viz: ['IMAGE (blueprint)', 'docker run', 'Container 1', 'Container 2', 'Container 3'],
+    why: 'Every Docker concept builds on this distinction. Misunderstanding images vs containers is the #1 source of Docker confusion.'
+  },
+  docker_hub: {
+    layer: 'core', icon: '🏪', title: 'Docker Hub', desc: 'The library of public images you can use instantly', level: 1, color: 'var(--whale)',
+    analogy: 'Docker Hub is npm for containers, or PyPI for Python packages. It\'s a public registry of 100,000+ pre-built images. Need PostgreSQL? docker pull postgres. Need a Python environment? docker pull python:3.11. Need nginx? docker pull nginx. You never build from scratch — you start FROM an existing image and add your own layers on top.',
+    intuition: 'Hub URL: hub.docker.com. Image names follow the pattern: username/repo:tag or just repo:tag for official images. Tags are versions: python:3.11, python:3.11-slim, python:latest. "latest" is often a bad idea in production.',
+    code: `# Pull an image (download it locally)
+docker pull python:3.11-slim
+
+# Run Python interactively
+docker run -it python:3.11-slim python
+
+# Run PostgreSQL (full database in one command!)
+docker run -d -p 5432:5432 \\
+  -e POSTGRES_PASSWORD=mypassword \\
+  postgres:15
+
+# Search for images
+docker search redis`,
+    viz_type: 'boxes',
+    viz: ['Docker Hub', 'docker pull', 'local image', 'docker run', 'container'],
+    why: 'Being fluent with Docker Hub lets you spin up any database, web server, or ML framework in seconds. Critical for building AI stacks quickly.'
+  },
+
+  // RUN
+  run_flags: {
+    layer: 'run', icon: '🚀', title: 'docker run Flags', desc: 'The options that make containers actually useful', level: 2, color: 'var(--cyan)',
+    analogy: 'docker run has many flags. Think of them as knobs on a spaceship control panel. You mostly need the same 5: -d (run in background), -p (map a port), -v (mount a folder), -e (set env variable), --name (give it a nice name). The rest are edge cases.',
+    intuition: 'Most confusion with Docker is about ports and volumes. Port mapping: host_port:container_port. Volume mounting: host_path:container_path. Once you internalize these two, 80% of Docker makes sense.',
+    code: `# -d = detached (background), -p = ports, --name = name
+docker run -d -p 8080:80 --name my-nginx nginx
+
+# Access at http://localhost:8080
+# (port 8080 on host → port 80 in container)
+
+# -e = environment variable
+docker run -d \\
+  -e POSTGRES_PASSWORD=secret \\
+  -e POSTGRES_DB=myapp \\
+  -p 5432:5432 \\
+  --name mydb \\
+  postgres:15
+
+# -it = interactive terminal
+docker run -it ubuntu:22.04 bash
+
+# --rm = auto-delete when stopped
+docker run --rm python:3.11 python -c "print('hello')"`,
+    viz_type: 'ports',
+    viz: ['localhost:8080', '→ (port mapping)', 'container:80', 'nginx serving here'],
+    why: 'These flags are the Docker commands you\'ll type every day. Especially -p and -v — master these and Docker becomes straightforward.'
+  },
+  exec_logs: {
+    layer: 'run', icon: '🔍', title: 'Exec, Logs & Inspect', desc: 'Look inside running containers', level: 2, color: 'var(--cyan)',
+    analogy: 'A running container is a bit like a sealed box — you can\'t see inside by default. docker exec lets you "open the box" and run commands inside. docker logs shows everything the container printed to stdout. docker inspect dumps everything Docker knows about it in JSON.',
+    intuition: 'When something breaks (and it will), you need these: docker logs <container> to see what happened. docker exec -it <container> sh to get a shell inside and poke around. docker inspect to see config, IP, mounts.',
+    code: `# See logs of a running container
+docker logs my-nginx
+docker logs -f my-nginx    # follow (live)
+docker logs --tail 50 my-nginx  # last 50 lines
+
+# Get a shell INSIDE the container
+docker exec -it my-nginx bash
+docker exec -it my-nginx sh  # if bash unavailable
+
+# Run a command inside
+docker exec my-nginx ls /etc/nginx/
+
+# Full JSON inspection
+docker inspect my-nginx
+
+# Container resource usage (like top)
+docker stats`,
+    viz_type: 'boxes',
+    viz: ['Running Container', 'docker exec -it', 'Shell inside container', 'run commands', 'debug issues'],
+    why: 'Debugging containers feels impossible until you learn exec and logs. These are your torch and map inside the container.'
+  },
+
+  // BUILD
+  dockerfile: {
+    layer: 'build', icon: '📄', title: 'Dockerfile', desc: 'A recipe for building your own Docker image', level: 3, color: 'var(--green)',
+    analogy: 'A Dockerfile is like a recipe or a build script. Each line is an instruction that adds a new "layer" to the image. FROM = start with this base (like choosing a starting ingredient). RUN = execute a command (like "preheat oven to 350F"). COPY = add files from your machine (like "add 2 cups flour"). CMD = what to do when the container starts (like "bake for 30 minutes").',
+    intuition: 'Docker caches layers. If line 5 changes, Docker re-runs from line 5 onward. So: put things that change rarely (OS setup, library installs) near the top. Put things that change often (your code) near the bottom. This makes rebuilds fast.',
+    code: `# Dockerfile for a Python ML app
+FROM python:3.11-slim          # start from Python image
+
+WORKDIR /app                    # set working directory
+
+# Install dependencies FIRST (changes rarely = cached)
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copy code LAST (changes often)
+COPY . .
+
+# Expose port (documentation only)
+EXPOSE 8000
+
+# What runs when container starts
+CMD ["python", "app.py"]`,
+    viz_type: 'layers',
+    viz: ['FROM python:3.11', 'WORKDIR /app', 'COPY requirements.txt', 'RUN pip install', 'COPY . .', 'CMD python app.py'],
+    why: 'Writing a good Dockerfile is the core skill of Docker. It\'s what lets you ship your ML model reliably anywhere.'
+  },
+  build_push: {
+    layer: 'build', icon: '🏗️', title: 'Build & Push Images', desc: 'Create your image and share it on Docker Hub', level: 3, color: 'var(--green)',
+    analogy: 'Building an image is like baking from a recipe (Dockerfile). Pushing is like uploading a photo of the result to Instagram (Docker Hub or a private registry). Anyone who pulls the image gets an exact copy of what you built — same Python version, same dependencies, same everything.',
+    intuition: 'Image tags are crucial: myapp:latest, myapp:v1.2.3, myapp:prod. In teams, you build images in CI (GitHub Actions) and push to a registry. Developers pull and run. The registry is the source of truth.',
+    code: `# Build an image from current directory
+docker build -t myapp:latest .
+
+# Build with a specific tag
+docker build -t myapp:v1.0.0 -f Dockerfile .
+
+# List your images
+docker images
+
+# Login to Docker Hub
+docker login
+
+# Push to Docker Hub (must be logged in)
+docker tag myapp:latest yourusername/myapp:latest
+docker push yourusername/myapp:latest
+
+# Pull it on another machine
+docker pull yourusername/myapp:latest`,
+    viz_type: 'boxes',
+    viz: ['Dockerfile', 'docker build', 'local image', 'docker push', 'Docker Hub', 'docker pull', 'anywhere'],
+    why: 'Build + push is how you ship ML models. "docker push mymodel:v3" is more reliable than emailing a zip file of your model weights and hoping the other person has the same CUDA version.'
+  },
+
+  // ADVANCED
+  volumes: {
+    layer: 'advanced', icon: '💾', title: 'Volumes & Mounts', desc: 'Persistent data that survives container death', level: 3, color: 'var(--purple)',
+    analogy: 'Containers are stateless by default — when you delete one, everything inside is gone. Think of a container as a hotel room and a volume as your carry-on bag. The room gets cleaned (container deleted) but your bag goes with you (data persists). Volumes are Docker-managed. Bind mounts link directly to a folder on your host machine (great for development).',
+    intuition: 'Use volumes for: databases (postgres data survives restarts), ML training checkpoints, logs. Use bind mounts for development (edit code on host, container sees changes instantly — no rebuild needed).',
+    code: `# Create a named volume
+docker volume create mydata
+
+# Mount volume at /data in container
+docker run -d \\
+  -v mydata:/data \\
+  --name myapp \\
+  myapp:latest
+
+# Bind mount (for dev — host folder ↔ container)
+docker run -d \\
+  -v $(pwd)/src:/app/src \\    # host:container
+  -p 8000:8000 \\
+  myapp:latest
+
+# List volumes
+docker volume ls
+
+# Inspect a volume
+docker volume inspect mydata`,
+    viz_type: 'boxes',
+    viz: ['host disk', '↔ bind mount', 'container /app', 'host ./src', '↔', 'container /app/src'],
+    why: 'For ML: mount your dataset directory into the container so you don\'t bake 100GB of data into the image. Mount your model output directory so training checkpoints survive container restarts.'
+  },
+  networking: {
+    layer: 'advanced', icon: '🌐', title: 'Docker Networking', desc: 'How containers talk to each other and the outside world', level: 3, color: 'var(--purple)',
+    analogy: 'By default, containers are isolated islands. Docker networking builds bridges between them. A Docker network is like a private LAN — containers on the same network can reach each other by name. So your web app container can talk to your database container by just using the service name "db" instead of an IP address.',
+    intuition: 'Three network types: bridge (default, isolated), host (share host networking, no isolation), none (completely isolated). For multi-container apps, create a custom bridge network and all containers on it can talk by name.',
+    code: `# Create a custom network
+docker network create mynet
+
+# Run containers on the same network
+docker run -d --name db --network mynet postgres:15
+docker run -d --name app --network mynet -p 8000:8000 myapp:latest
+
+# Now 'app' container can reach 'db' by hostname 'db'
+# e.g., DATABASE_URL=postgres://db:5432/myapp
+
+# List networks
+docker network ls
+
+# Inspect a network (see which containers are on it)
+docker network inspect mynet`,
+    viz_type: 'boxes',
+    viz: ['mynet (bridge)', 'app container', '↔ db hostname', 'db container', '→ exposed: 8000', 'host:8000'],
+    why: 'When building AI apps (model API + database + frontend), all services run in separate containers on the same Docker network and communicate by service name.'
+  },
+  compose: {
+    layer: 'advanced', icon: '🎼', title: 'Docker Compose', desc: 'Define multi-container apps in one YAML file', level: 4, color: 'var(--purple)',
+    analogy: 'Docker Compose is like an orchestra conductor. Instead of running 5 docker run commands with flags you have to memorize, you write one docker-compose.yml file that defines everything. Then docker compose up starts the whole stack. docker compose down tears it all down. Perfect for "dev environment as code".',
+    intuition: 'Compose is standard for local development and simple deployments. Define services (containers), networks, volumes all in YAML. Run everything with one command. Commit the file so your whole team uses the exact same dev environment.',
+    code: `# docker-compose.yml
+version: '3.8'
+
+services:
+  api:
+    build: .                     # build from ./Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://db:5432/myapp
+    depends_on:
+      - db
+    volumes:
+      - ./src:/app/src           # live-reload in dev
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=myapp
+      - POSTGRES_PASSWORD=secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:`,
+    viz_type: 'boxes',
+    viz: ['docker-compose.yml', 'docker compose up', 'api container :8000', 'db container :5432', 'postgres_data volume'],
+    why: 'Every AI/ML project should have a docker-compose.yml. It means any developer can clone the repo and run docker compose up to get a fully working environment in minutes.'
+  },
+
+  // ML
+  ml_gpu: {
+    layer: 'ml', icon: '🧠', title: 'Docker + GPU (CUDA)', desc: 'Run ML workloads with GPU access in containers', level: 4, color: 'var(--amber)',
+    analogy: 'CUDA versions are the most painful dependency in ML. "It works on my RTX 3090 with CUDA 11.8 but not on the training server with CUDA 12.1." Docker solves this by packaging the exact CUDA version alongside your code. NVIDIA Container Toolkit lets Docker containers access GPU hardware.',
+    intuition: 'NVIDIA maintains official CUDA base images: nvcr.io/nvidia/cuda:11.8-cudnn8-devel-ubuntu22.04. Build FROM these and your CUDA dependency is frozen. The --gpus flag gives containers access to host GPUs.',
+    code: `# Install NVIDIA Container Toolkit first (once on host)
+# See: docs.nvidia.com/datacenter/cloud-native/
+
+# Run with GPU access
+docker run --gpus all nvidia/cuda:11.8-base nvidia-smi
+
+# Dockerfile for PyTorch training
+FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["python", "train.py"]
+
+# Build and run with GPU
+docker build -t mytrain:v1 .
+docker run --gpus all -v $(pwd)/data:/data mytrain:v1`,
+    viz_type: 'boxes',
+    viz: ['Host GPU (CUDA)', 'NVIDIA Container Toolkit', 'Container (your code)', 'torch.cuda.is_available() = True'],
+    why: 'Reproducible ML training is one of Docker\'s killer features. Freeze your CUDA, cudnn, and PyTorch versions in the image. Any GPU machine can reproduce your exact training environment.'
+  },
+  model_serving: {
+    layer: 'ml', icon: '🤖', title: 'Serving ML Models', desc: 'Package and deploy your trained models', level: 4, color: 'var(--amber)',
+    analogy: 'You trained a model. Now what? Without Docker, deploying means "install Python, install these 47 libraries, make sure CUDA 11.8 is installed, download the model weights, run the server." With Docker: pull one image, run one command, model is serving on port 8000. Kubernetes can auto-scale containers to handle traffic.',
+    intuition: 'Standard pattern: FastAPI/Flask for HTTP endpoint + your model loaded in memory + Docker image with everything frozen. Docker Hub stores versioned model images. CI/CD automatically builds and deploys new versions.',
+    code: `# Dockerfile for a model serving API
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install fastapi uvicorn transformers torch
+
+COPY model/ ./model/     # include trained weights
+COPY app.py .
+
+EXPOSE 8000
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# app.py (simplified)
+# from fastapi import FastAPI
+# from transformers import pipeline
+# app = FastAPI()
+# model = pipeline("text-classification", model="./model")
+# @app.post("/predict")
+# def predict(text: str): return model(text)`,
+    viz_type: 'boxes',
+    viz: ['train.py', '→ model weights', '→ Dockerfile', '→ docker build', '→ image', '→ docker run', '→ HTTP API'],
+    why: 'This is how real AI products work. Your PCC v1 verification system would be a container: takes input, runs inference, returns structured output. Portable, versioned, deployable anywhere.'
+  },
+};
+
+const pathItems = [
+  { num: '01', title: 'Run Your First Container', desc: 'Install Docker Desktop. Run hello-world. Then run postgres, then python:3.11-slim interactively. Get comfortable with docker run, docker ps, docker stop, docker rm.', dur: '1 day', tags: ['docker run', 'docker ps', 'docker stop', 'hello-world'] },
+  { num: '02', title: 'Understand the Image/Container Split', desc: 'Spend an hour just with docker images and docker ps -a. Build the mental model. Download 3 different images. Run multiple containers from one image simultaneously.', dur: '1 day', tags: ['docker images', 'docker ps -a', 'image:tag'] },
+  { num: '03', title: 'Write Your First Dockerfile', desc: 'Containerize a simple Python script you already have. Write a Dockerfile, build it, run it. Break the cache intentionally to understand layers. Compare image sizes.', dur: '2–3 days', tags: ['FROM', 'RUN', 'COPY', 'CMD', 'docker build'] },
+  { num: '04', title: 'Ports and Volumes', desc: 'Run nginx on port 8080. Mount a local directory into a container and edit files live. Run postgres with a volume and verify data persists after container restart.', dur: '2 days', tags: ['-p port', '-v volume', 'bind mount', 'named volume'] },
+  { num: '05', title: 'Docker Compose', desc: 'Write a docker-compose.yml that starts your app + a database. Practice docker compose up/down. Add environment variables. This is the real-world dev workflow.', dur: '3 days', tags: ['docker compose', 'services', 'depends_on', 'networks'] },
+  { num: '06', title: 'Build + Push to a Registry', desc: 'Create a Docker Hub account. Build an image, tag it properly (v1.0.0), push it. Pull it on a different machine (or in a CI job). Practice the full image lifecycle.', dur: '1–2 days', tags: ['docker push', 'docker pull', 'registry', 'tags'] },
+  { num: '07', title: 'ML Model in Docker', desc: 'Containerize a real ML inference script. Add FastAPI. Build the image. Run it. Test it with curl. This is the pattern used in every production ML team.', dur: '3–5 days', tags: ['FastAPI', 'model serving', '--gpus', 'GPU'] },
+];
+
+const cheatItems = [
+  { sec: 'Container Basics', items: [
+    { cmd: 'docker run <image>', what: 'Create and start a container' },
+    { cmd: 'docker run -d <image>', what: 'Run in background (detached)' },
+    { cmd: 'docker run -it <image> sh', what: 'Interactive shell in container' },
+    { cmd: 'docker ps', what: 'List running containers' },
+    { cmd: 'docker ps -a', what: 'List all containers (inc. stopped)' },
+    { cmd: 'docker stop <id>', what: 'Stop a running container' },
+    { cmd: 'docker rm <id>', what: 'Delete a stopped container' },
+    { cmd: 'docker rm -f <id>', what: 'Force stop + delete' },
+  ]},
+  { sec: 'Images', items: [
+    { cmd: 'docker images', what: 'List local images' },
+    { cmd: 'docker pull <image>:<tag>', what: 'Download an image' },
+    { cmd: 'docker build -t name:tag .', what: 'Build image from Dockerfile' },
+    { cmd: 'docker push name:tag', what: 'Push image to registry' },
+    { cmd: 'docker rmi <image>', what: 'Delete an image' },
+    { cmd: 'docker image prune', what: 'Delete all unused images' },
+  ]},
+  { sec: 'Useful Run Flags', items: [
+    { cmd: '-p 8080:80', what: 'Map host port 8080 → container port 80' },
+    { cmd: '-v ./data:/app/data', what: 'Bind mount host folder into container' },
+    { cmd: '-e MY_VAR=value', what: 'Set environment variable' },
+    { cmd: '--name mycontainer', what: 'Name the container' },
+    { cmd: '--rm', what: 'Auto-delete when stopped' },
+    { cmd: '--network mynet', what: 'Attach to a specific network' },
+    { cmd: '--gpus all', what: 'Grant access to all GPUs' },
+  ]},
+  { sec: 'Debug', items: [
+    { cmd: 'docker logs <id>', what: 'See container output' },
+    { cmd: 'docker logs -f <id>', what: 'Follow logs live' },
+    { cmd: 'docker exec -it <id> sh', what: 'Shell inside running container' },
+    { cmd: 'docker inspect <id>', what: 'Full JSON config of container' },
+    { cmd: 'docker stats', what: 'Live CPU/memory usage' },
+  ]},
+  { sec: 'Docker Compose', items: [
+    { cmd: 'docker compose up', what: 'Start all services' },
+    { cmd: 'docker compose up -d', what: 'Start in background' },
+    { cmd: 'docker compose down', what: 'Stop + remove containers' },
+    { cmd: 'docker compose logs -f', what: 'Tail logs from all services' },
+    { cmd: 'docker compose build', what: 'Rebuild images' },
+    { cmd: 'docker compose exec app sh', what: 'Shell into a service' },
+  ]},
+];
+
+const dockerfileLines = [
+  { line: 'FROM python:3.11-slim', type: 'instruction', explain: 'Start from the official Python 3.11 slim image. "slim" variants are smaller (fewer tools) vs "full" images. Always pin a specific version — never FROM python:latest in production.' },
+  { line: '# ── Metadata ──', type: 'comment' },
+  { line: 'LABEL maintainer="you@example.com"', type: 'instruction', explain: 'Optional metadata. LABEL adds key-value metadata to the image. Not a layer that affects functionality.' },
+  { line: '', type: 'blank' },
+  { line: 'WORKDIR /app', type: 'instruction', explain: 'Sets the working directory for all subsequent commands. Creates the directory if it doesn\'t exist. All COPY, RUN, CMD paths are relative to this.' },
+  { line: '', type: 'blank' },
+  { line: '# ── Install dependencies (cached separately) ──', type: 'comment' },
+  { line: 'COPY requirements.txt .', type: 'instruction', explain: 'Copy ONLY requirements.txt first. This is the caching trick: if requirements.txt hasn\'t changed, Docker uses the cached layer for the pip install step — even if your code changed.' },
+  { line: 'RUN pip install --no-cache-dir -r requirements.txt', type: 'instruction', explain: 'Install Python packages. --no-cache-dir reduces image size. This layer is expensive (minutes) but gets cached if requirements.txt didn\'t change.' },
+  { line: '', type: 'blank' },
+  { line: '# ── Copy application code ──', type: 'comment' },
+  { line: 'COPY . .', type: 'instruction', explain: 'Copy everything else. This goes AFTER pip install because code changes frequently — we don\'t want to bust the pip cache every build. Order matters for performance.' },
+  { line: '', type: 'blank' },
+  { line: 'EXPOSE 8000', type: 'instruction', explain: 'Documentation: tells readers this container listens on port 8000. Doesn\'t actually open the port — you still need -p 8000:8000 when running.' },
+  { line: '', type: 'blank' },
+  { line: '# ── Startup command ──', type: 'comment' },
+  { line: 'CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]', type: 'instruction', explain: 'Default command when container starts. Use JSON array form (not shell form) to get proper signal handling. 0.0.0.0 is required so the server is reachable from outside the container.' },
+];
+
+function renderConcepts() {
+  const layers = { core:[], run:[], build:[], advanced:[], ml:[] };
+  Object.entries(concepts).forEach(([k,c]) => layers[c.layer]?.push([k,c]));
+  const map = { core:'layer-core', run:'layer-run', build:'layer-build', advanced:'layer-advanced', ml:'layer-ml' };
+  Object.entries(map).forEach(([layer, id]) => {
+    const grid = document.getElementById(id);
+    layers[layer].forEach(([key, c]) => {
+      const done = JSON.parse(localStorage.getItem('docker-done')||'[]').includes(key);
+      const card = document.createElement('div');
+      card.className = 'c-card' + (done ? ' done' : '');
+      card.id = 'cc-' + key;
+      card.style.setProperty('--card-top', c.color);
+      const bars = [1,2,3,4].map(i => `<span class="${i<=c.level?'filled':''}"></span>`).join('');
+      card.innerHTML = `<div class="c-icon">${c.icon}</div><div class="c-title">${c.title}</div><div class="c-desc">${c.desc}</div><div class="c-level">${bars}</div>`;
+      card.onclick = () => openDetail(key);
+      grid.appendChild(card);
+    });
+  });
+}
+
+function openDetail(key) {
+  const c = concepts[key];
+  const zone = document.getElementById('detail-zone');
+  const done = JSON.parse(localStorage.getItem('docker-done')||'[]').includes(key);
+  const vizHtml = `<div class="container-viz"><div class="cv-row">${c.viz.map((v,i) => i%2===0 ? `<div class="cv-box cv-container">${v}</div>` : `<div class="cv-arrow">${v}</div>`).join('')}</div></div>`;
+  zone.innerHTML = `
+    <div class="detail">
+      <div class="d-header">
+        <div class="d-title"><span>${c.icon}</span><span>${c.title}</span></div>
+        <button class="d-close" onclick="document.getElementById('detail-zone').innerHTML=''">✕</button>
+      </div>
+      <div class="d-grid">
+        <div class="d-block d-analogy d-full"><h4>The Analogy</h4><p>${c.analogy}</p></div>
+        <div class="d-block"><h4>The Intuition</h4><p>${c.intuition}</p></div>
+        <div class="d-block d-full"><h4>Commands</h4><div class="code-block"><pre>${c.code.split('\n').map(l => l.startsWith('#') ? `<span class="comment">${l}</span>` : l ? `<span class="cmd-line">${l}</span>` : '').join('\n')}</pre></div></div>
+        <div class="d-block d-full"><h4>Flow</h4>${vizHtml}</div>
+        <div class="d-block d-paper d-full"><h4>Why This Matters for AI/ML</h4><p>${c.why}</p></div>
+      </div>
+      <button class="mark-btn" onclick="markDone('${key}',this)">${done?'✓ Learned (undo)':'Mark as Learned ✓'}</button>
+    </div>`;
+  zone.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function markDone(key, btn) {
+  const done = JSON.parse(localStorage.getItem('docker-done')||'[]');
+  if (done.includes(key)) { done.splice(done.indexOf(key),1); btn.textContent='Mark as Learned ✓'; }
+  else { done.push(key); btn.textContent='✓ Learned (undo)'; }
+  localStorage.setItem('docker-done', JSON.stringify(done));
+  const card = document.getElementById('cc-'+key);
+  if (card) card.className = 'c-card' + (done.includes(key)?' done':'');
+  updateProgress();
+}
+
+function updateProgress() {
+  const done = JSON.parse(localStorage.getItem('docker-done')||'[]');
+  const total = Object.keys(concepts).length;
+  const pct = Math.round(done.length/total*100);
+  const bar = document.getElementById('prog-bar');
+  const lbl = document.getElementById('prog-lbl');
+  if (bar) bar.style.width = pct + '%';
+  if (lbl) lbl.textContent = `${done.length} / ${total} concepts learned — ${pct}%${pct>=100?' 🐳 container-ready':''}`;
+}
+
+function renderDockerfile() {
+  const c = document.getElementById('dockerfile-content');
+  let html = '<div class="dockerfile-block">';
+  dockerfileLines.forEach(l => {
+    if (l.type === 'comment') { html += `<div><span class="df-comment">${l.line}</span></div>`; }
+    else if (l.type === 'blank') { html += '<div>&nbsp;</div>'; }
+    else {
+      const parts = l.line.split(' ');
+      html += `<div><span class="df-instruction">${parts[0]}</span> <span class="df-arg">${parts.slice(1).join(' ')}</span></div>`;
+      html += `<div class="df-tooltip">↳ ${l.explain}</div>`;
+    }
+  });
+  html += '</div>';
+  c.innerHTML = html;
+}
+
+function renderPath() {
+  const list = document.getElementById('path-list');
+  pathItems.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'path-item';
+    el.innerHTML = `<div class="path-num">${p.num}</div><div><h4>${p.title}</h4><p>${p.desc}</p><div class="path-tags">${p.tags.map(t=>`<span class="path-tag">${t}</span>`).join('')}</div></div><div class="path-dur">${p.dur}</div>`;
+    list.appendChild(el);
+  });
+  updateProgress();
+}
+
+function renderCheat() {
+  const c = document.getElementById('cheat-content');
+  cheatItems.forEach(s => {
+    c.innerHTML += `<div class="cheat-sec"><h3>// ${s.sec}</h3><div class="cheat-grid">${s.items.map(i=>`<div class="cheat-row"><span class="cheat-cmd">${i.cmd}</span><span class="cheat-what">${i.what}</span></div>`).join('')}</div></div>`;
+  });
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+renderConcepts();
+renderDockerfile();
+renderPath();
+renderCheat();
+const done = JSON.parse(localStorage.getItem('docker-done')||'[]');
+done.forEach(key => { const c = document.getElementById('cc-'+key); if (c) c.classList.add('done'); });
+</script>
+</body>
+</html>

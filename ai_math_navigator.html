@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Math Navigator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #09090f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: #2a2a3a;
+    --accent: #7c6af7;
+    --accent2: #f76ac8;
+    --accent3: #6af7c8;
+    --gold: #f7c46a;
+    --text: #e8e8f0;
+    --muted: #7878a0;
+    --danger: #f76a6a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: 
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(124,106,247,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 80% 80%, rgba(247,106,200,0.06) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── Header ── */
+  header {
+    padding: 40px 0 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-inner { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .logo-text { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo-text span { color: var(--accent); }
+  .paper-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .paper-badge::before { content: '📄'; }
+
+  .tagline { margin-top: 20px; font-size: 14px; color: var(--muted); line-height: 1.6; max-width: 560px; }
+  .tagline strong { color: var(--accent3); font-weight: 600; }
+
+  /* ── Nav Tabs ── */
+  .tabs {
+    display: flex; gap: 4px;
+    padding: 24px 0 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 10px 20px;
+    border-radius: 8px 8px 0 0;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+    position: relative;
+    bottom: -1px;
+    border: 1px solid transparent;
+    border-bottom: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    background: var(--surface);
+    color: var(--accent);
+    border-color: var(--border);
+    border-bottom-color: var(--surface);
+  }
+
+  /* ── Panels ── */
+  .panel { display: none; padding: 32px 0; }
+  .panel.active { display: block; }
+
+  /* ── Concept Map ── */
+  .roadmap-header { margin-bottom: 28px; }
+  .roadmap-header h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+  .roadmap-header p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  .layer-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .layer-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .concept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 32px; }
+
+  .concept-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .concept-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--card-color, var(--accent));
+    opacity: 0.6;
+  }
+  .concept-card:hover {
+    border-color: var(--card-color, var(--accent));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .concept-card.mastered { opacity: 0.6; }
+  .concept-card.mastered::after {
+    content: '✓';
+    position: absolute; top: 12px; right: 14px;
+    color: var(--accent3);
+    font-size: 16px;
+  }
+
+  .card-emoji { font-size: 24px; margin-bottom: 10px; }
+  .card-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .card-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .card-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+  .difficulty {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .diff-1 { background: rgba(106,247,200,0.15); color: var(--accent3); }
+  .diff-2 { background: rgba(124,106,247,0.15); color: var(--accent); }
+  .diff-3 { background: rgba(247,196,106,0.15); color: var(--gold); }
+  .diff-4 { background: rgba(247,106,200,0.15); color: var(--accent2); }
+  .diff-5 { background: rgba(247,106,106,0.15); color: var(--danger); }
+
+  .arrow-row { display: flex; justify-content: center; margin-bottom: 20px; color: var(--muted); font-size: 24px; }
+
+  /* ── Concept Detail ── */
+  .detail-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-top: 0;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .detail-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; display: flex; align-items: center; gap: 12px; }
+  .detail-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+
+  .detail-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 680px) { .detail-sections { grid-template-columns: 1fr; } }
+
+  .detail-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .detail-block h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .detail-block p { font-size: 13px; line-height: 1.7; color: var(--text); }
+
+  .analogy-box {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, rgba(124,106,247,0.1), rgba(247,106,200,0.08));
+    border: 1px solid rgba(124,106,247,0.3);
+  }
+  .analogy-box h4 { color: var(--accent); }
+
+  .math-box {
+    grid-column: 1 / -1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .math-box h4 { color: var(--gold); }
+  .math-box .equation {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--gold);
+    background: rgba(247,196,106,0.08);
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin: 10px 0;
+    line-height: 1.8;
+  }
+  .math-box .eq-explain { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+
+  .connections { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .conn-chip {
+    background: rgba(124,106,247,0.12);
+    border: 1px solid rgba(124,106,247,0.25);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 11px;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .conn-chip:hover { background: rgba(124,106,247,0.25); }
+
+  .paper-link-box {
+    margin-top: 16px;
+    padding: 14px;
+    background: rgba(106,247,200,0.07);
+    border: 1px solid rgba(106,247,200,0.2);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--accent3);
+    line-height: 1.6;
+  }
+  .paper-link-box strong { font-weight: 700; }
+
+  /* ── Progress ── */
+  .progress-section { margin-bottom: 32px; }
+  .progress-section h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .progress-bar-outer {
+    height: 8px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-bar-inner {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 99px;
+    transition: width 0.5s ease;
+  }
+  .progress-label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+
+  /* ── Path ── */
+  .path-list { display: flex; flex-direction: column; gap: 12px; }
+  .path-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .path-item:hover { border-color: var(--accent); transform: translateX(4px); }
+  .path-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .path-content h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .path-content p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .path-duration {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  /* ── Mastery button ── */
+  .mastery-btn {
+    margin-top: 20px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    background: rgba(124,106,247,0.12);
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mastery-btn:hover { background: var(--accent); color: white; }
+
+  /* ── Close ── */
+  .close-btn {
+    float: right;
+    background: var(--border);
+    border: none;
+    color: var(--muted);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .close-btn:hover { background: var(--danger); color: white; }
+
+  /* ── Scroll ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Pulse animation for new content */
+  @keyframes pulse-border {
+    0%, 100% { border-color: var(--border); }
+    50% { border-color: var(--accent); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-inner">
+      <div>
+        <div class="logo">
+          <div class="logo-icon">∇</div>
+          <div class="logo-text">AI Math <span>Navigator</span></div>
+        </div>
+        <p class="tagline">
+          Your personalized path from <strong>basic algebra → breakthrough research</strong>.<br>
+          Built around the paper you're studying. Click any concept to learn it.
+        </p>
+      </div>
+      <div class="paper-badge">2411.14991 · FEPS: Active Inference</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('map')">🗺️ Concept Map</button>
+      <button class="tab" onclick="switchTab('path')">🛤️ Learning Path</button>
+      <button class="tab" onclick="switchTab('paper')">📄 Paper Decoder</button>
+    </div>
+  </header>
+
+  <!-- CONCEPT MAP TAB -->
+  <div class="panel active" id="tab-map">
+    <div class="roadmap-header">
+      <h2>Math Dependency Map</h2>
+      <p>The paper you're studying sits at the top. Everything below is what you need to build up to it.<br>
+         Start at the bottom and work up. Click any card to open a full explanation.</p>
+    </div>
+
+    <div id="detail-container"></div>
+
+    <div class="layer-label">Layer 1 · Pure Foundation — Start Here</div>
+    <div class="concept-grid" id="layer1"></div>
+
+    <div class="arrow-row">↓</div>
+    <div class="layer-label">Layer 2 · Probability & Information Theory</div>
+    <div class="concept-grid" id="layer2"></div>
+
+    <div class="arrow-row">↓</div>
+    <div class="layer-label">Layer 3 · Decision Making Under Uncertainty</div>
+    <div class="concept-grid" id="layer3"></div>
+
+    <div class="arrow-row">↓</div>
+    <div class="layer-label">Layer 4 · Core Paper Concepts</div>
+    <div class="concept-grid" id="layer4"></div>
+
+    <div class="arrow-row">↓</div>
+    <div class="layer-label">Layer 5 · The Paper Itself · FEPS</div>
+    <div class="concept-grid" id="layer5"></div>
+  </div>
+
+  <!-- LEARNING PATH TAB -->
+  <div class="panel" id="tab-path">
+    <div class="roadmap-header">
+      <h2>Your Learning Path</h2>
+      <p>A sequenced curriculum from where you are now to writing original research. Estimated weekly commitment: 5–10 hrs.</p>
+    </div>
+    <div id="progress-area"></div>
+    <div class="path-list" id="path-list"></div>
+  </div>
+
+  <!-- PAPER DECODER TAB -->
+  <div class="panel" id="tab-paper">
+    <div class="roadmap-header">
+      <h2>Paper Decoder: FEPS</h2>
+      <p>The key equations from the paper, translated into plain English with intuition-first explanations.</p>
+    </div>
+    <div id="paper-decoder"></div>
+  </div>
+</div>
+
+<script>
+const concepts = {
+  // LAYER 1
+  probability_basics: {
+    layer: 1,
+    emoji: '🎲',
+    title: 'Probability Basics',
+    short: 'How likely is something to happen?',
+    difficulty: 1,
+    color: 'var(--accent3)',
+    why: 'Everything in AI/ML is probabilistic. If you don\'t understand P(X), you can\'t read a single equation in this paper.',
+    analogy: 'Imagine flipping a coin. Probability is just the fraction of times something happens over many tries. P(heads) = 0.5 means "half the time." Now imagine a weather app saying "70% chance of rain" — that\'s a probability distribution over tomorrow\'s weather.',
+    intuition: 'A probability is a number between 0 and 1. P(X) = 0 means "impossible," P(X) = 1 means "certain." The key insight: probabilities must add up to 1 — something has to happen.',
+    math: 'P(X = x) = probability X takes value x\nP(A and B) = P(A) × P(B)  [if independent]\nP(A or B) = P(A) + P(B) - P(A and B)\nAll probabilities sum to 1: Σ P(X=x) = 1',
+    math_explain: 'The Σ (sigma) just means "add them all up." Think of it as the sum of all possible outcomes.',
+    paper_use: 'The paper is entirely built on probability distributions. Every equation involves P(something|something_else). The world model is literally a set of probability distributions.',
+    connects: ['conditional_probability', 'random_variables', 'bayes_theorem']
+  },
+  
+  random_variables: {
+    layer: 1,
+    emoji: '📊',
+    title: 'Random Variables',
+    short: 'A variable whose value is determined by chance',
+    difficulty: 1,
+    color: 'var(--accent3)',
+    why: 'The paper uses B_t (belief at time t), S_t (observation), A_t (action) as random variables. You see them everywhere.',
+    analogy: 'A dice roll is a random variable — before you roll, it could be 1,2,3,4,5, or 6. After you roll, it has a specific value. A random variable is like a placeholder for "whatever uncertain value this turns out to be." In the paper, B_t is the "belief state at time t" — uncertain before the agent observes anything, specific after.',
+    intuition: 'Random variables are just named slots for uncertain quantities. Capital letters (B, S, A) = the variable/placeholder. Lowercase (b, s, a) = a specific value it took.',
+    math: 'B_t = belief state at time t  (random variable)\nb_t = a specific belief  (value)\nP(B_t = b) = probability belief is b at time t',
+    math_explain: 'The subscript "t" just means "at time step t." The paper uses B_0:t to mean the sequence (B_0, B_1, ..., B_t).',
+    paper_use: 'Equation (1) in the paper defines the joint distribution over all the random variables (B, A, S) over time. Understanding this notation unlocks the entire paper.',
+    connects: ['probability_basics', 'conditional_probability', 'expectations']
+  },
+
+  // LAYER 2
+  conditional_probability: {
+    layer: 2,
+    emoji: '🔗',
+    title: 'Conditional Probability',
+    short: 'Probability given that something else is true',
+    difficulty: 2,
+    color: 'var(--accent)',
+    why: 'Almost every equation in the paper is a conditional probability. P(B_t | B_{t-1}, A_{t-1}) means "what\'s the probability of this belief, given previous belief and action."',
+    analogy: 'P(umbrella | rain) is the probability someone carries an umbrella GIVEN it\'s raining. The "given" is crucial — it changes the probability. P(positive test | has disease) is different from P(has disease | positive test). Confusing these two is one of the most common reasoning errors humans make.',
+    intuition: 'The vertical bar | means "given." P(A|B) = "probability of A given we already know B happened." This lets us update our beliefs as we get new information.',
+    math: 'P(A|B) = P(A and B) / P(B)\n\nThis is called the "chain rule" of probability:\nP(A, B) = P(A|B) × P(B)',
+    math_explain: 'If you know it\'s raining [B], and 80% of rain days have umbrella people [P(A|B)=0.8], and it rains 20% of days [P(B)=0.2], then P(both) = 0.8 × 0.2 = 0.16.',
+    paper_use: 'The transition function T = P(B_t | B_{t-1}, A_{t-1}) is a conditional probability. The emission function L = P(S_t | B_t) is a conditional probability. These are the two central pieces of the world model.',
+    connects: ['probability_basics', 'bayes_theorem', 'markov_property']
+  },
+
+  expectations: {
+    layer: 2,
+    emoji: '⚖️',
+    title: 'Expectation (Expected Value)',
+    short: 'The average value if you ran something infinitely many times',
+    difficulty: 2,
+    color: 'var(--accent)',
+    why: 'The EFE (Expected Free Energy) is literally an expectation. The E[ ] symbol appears in every key equation in the paper.',
+    analogy: 'Roll a fair 6-sided die many times. The expected value is (1+2+3+4+5+6)/6 = 3.5. You\'ll never actually roll 3.5, but on average that\'s what you get. In the paper, the agent "expects" (calculates the average over all possible futures) what the free energy will be — then picks the action that minimizes it.',
+    intuition: 'E[X] = "what value do we expect X to take on average?" You multiply each possible value by its probability, then sum them all up. It\'s a probability-weighted average.',
+    math: 'E[X] = Σ x · P(X = x)  [discrete]\nE[f(X)] = Σ f(x) · P(X = x)\n\nConditional expectation:\nE[X|Y=y] = Σ x · P(X=x | Y=y)',
+    math_explain: 'The big E_b~q(B)[f(b)] in the paper means: "average f(b) over all belief states b, weighted by how likely each b is according to distribution q."',
+    paper_use: 'Equation (2) and (3) in the paper are full of expectations. The VFE contains E_bt~q(Bt)[−log p(s|bt)], which is "the expected surprise" — the average -log probability of observing s across all belief states.',
+    connects: ['probability_basics', 'random_variables', 'entropy']
+  },
+
+  entropy: {
+    layer: 2,
+    emoji: '🌀',
+    title: 'Entropy',
+    short: 'A measure of uncertainty or information content',
+    difficulty: 2,
+    color: 'var(--accent)',
+    why: 'The paper explicitly uses entropy H[B_t|b_{t-1}, a] in Equation (4) as a measure of uncertainty about future belief states. Entropy = exploration in this framework.',
+    analogy: 'A fair coin has HIGH entropy (50/50, maximum uncertainty). A coin that always lands heads has ZERO entropy (no uncertainty). A weather system has high entropy — hard to predict. A sunrise has very low entropy — certain to happen. Entropy measures "how surprised would you be on average?" If you know exactly what will happen, you\'re never surprised → zero entropy.',
+    intuition: 'High entropy = high uncertainty = more information you gain when you observe something. Low entropy = already know what\'s going to happen. The agent WANTS to reduce entropy about important things (its goal), but can EXPLOIT high-entropy situations to learn more.',
+    math: 'H[X] = -Σ P(X=x) · log P(X=x)\n\nConditional entropy:\nH[Y|X=x] = -Σ P(Y=y|X=x) · log P(Y=y|X=x)',
+    math_explain: 'The -log(p) is the "surprise" of event p occurring. Rare events (small p) give large -log(p) = big surprise. Common events give small surprise. Entropy is the AVERAGE surprise.',
+    paper_use: 'In Equation (4), the first term is -H[B_t|b_{t-1}, a]. The agent minimizes EFE, so it maximizes entropy → it seeks situations where it will learn the most. This is the mathematical basis of curiosity.',
+    connects: ['expectations', 'kl_divergence', 'free_energy']
+  },
+
+  bayes_theorem: {
+    layer: 2,
+    emoji: '🔄',
+    title: "Bayes' Theorem",
+    short: 'How to update beliefs when you get new evidence',
+    difficulty: 2,
+    color: 'var(--accent)',
+    why: 'The entire paper is Bayesian. "Active inference" literally means "doing inference (Bayesian updating) actively (by taking actions)." Without Bayes, the paper makes no sense.',
+    analogy: 'You have a friend who sometimes lies. Before they speak, you think there\'s a 50% chance they\'re lying. They claim it\'s raining. You look outside and see wet pavement. Now you update: probably NOT lying. Bayes\' theorem formalizes this. Prior belief + new evidence → updated belief (posterior). Your brain does this constantly. AI systems do this mathematically.',
+    intuition: 'Bayes\' theorem lets you flip conditional probabilities. You might know P(positive test | disease), but you want P(disease | positive test). Bayes tells you how to get there. It\'s the engine of rational belief update.',
+    math: 'P(hypothesis | evidence) = P(evidence | hypothesis) × P(hypothesis) / P(evidence)\n\nOr: posterior = likelihood × prior / evidence\n\nShorthand: P(H|E) ∝ P(E|H) × P(H)',
+    math_explain: 'The ∝ means "proportional to" (same up to a scaling factor). Prior = what you believed before. Likelihood = how probable is this evidence if the hypothesis is true. Posterior = updated belief after seeing evidence.',
+    paper_use: 'The paper says the agent performs "approximate Bayesian inference." The VFE (Eq. 2) is minimized to get the approximate posterior over belief states. Every time the agent observes something new, it Bayesian-updates its world model.',
+    connects: ['conditional_probability', 'variational_inference', 'kl_divergence']
+  },
+
+  // LAYER 3
+  markov_property: {
+    layer: 3,
+    emoji: '⛓️',
+    title: 'Markov Property & MDPs',
+    short: 'The future only depends on the present, not the past',
+    difficulty: 3,
+    color: 'var(--gold)',
+    why: 'The paper uses a POMDP (partially observable Markov decision process). This is the mathematical framework that underlies ALL RL and most AI planning systems.',
+    analogy: 'Chess: to decide your next move, you only need to look at the current board, not the history of how you got there. The current board state IS the history, compressed. Contrast with: "my confidence in this person" which depends on their entire history of behavior — that\'s non-Markovian. The Markov assumption makes math tractable.',
+    intuition: 'The Markov property: P(future | present, past) = P(future | present). The present contains all you need. This simplification is what makes the transition function T = P(B_t | B_{t-1}, A_{t-1}) work — you only need the previous state, not the whole history.',
+    math: 'P(B_t | B_0, B_1, ..., B_{t-1}, A_0,...,A_{t-1})\n= P(B_t | B_{t-1}, A_{t-1})  ← Markov assumption\n\nMDP: (States S, Actions A, Transitions T, Rewards R)',
+    math_explain: 'An MDP is a world where you can observe everything. A POMDP (Partially Observable MDP) is more realistic — you only see partial observations, not the full state. The agent must infer hidden states from its observations.',
+    paper_use: 'The paper explicitly defines the world model as a POMDP: (B, S, A, T, L, R). Understanding MDPs is the gateway to understanding this framework.',
+    connects: ['conditional_probability', 'pomdp', 'policy']
+  },
+
+  kl_divergence: {
+    layer: 3,
+    emoji: '📐',
+    title: 'KL Divergence',
+    short: 'How different are two probability distributions?',
+    difficulty: 3,
+    color: 'var(--gold)',
+    why: 'KL divergence appears explicitly in Equation (2) of the paper as the first term of the VFE (Variational Free Energy). It\'s the penalty for having beliefs that deviate too far from the prior.',
+    analogy: 'You have a prediction for tomorrow\'s weather (your prior). After checking the news, you update it (posterior). KL divergence measures: "how much did your beliefs change?" Small KL = small update (new evidence matched expectations). Large KL = big surprise (evidence contradicted your model). The paper wants agents to update minimally unless the evidence demands it.',
+    intuition: 'D_KL(Q||P) = 0 when Q and P are identical. Grows as they diverge. It\'s NOT symmetric (D_KL(Q||P) ≠ D_KL(P||Q)). Think of it as: "extra bits of information needed to encode P using Q\'s assumptions."',
+    math: 'D_KL(Q || P) = Σ Q(x) · log(Q(x) / P(x))\n\nAlways ≥ 0 (Gibbs inequality)\nEquals 0 only when Q = P',
+    math_explain: 'In the VFE (Eq. 2), D_KL[q_φ(B_t||p(B_t)] penalizes the posterior from drifting far from the prior. This prevents the agent from overreacting to a single observation.',
+    paper_use: 'First term of Equation (2): D_KL[q_φ(B_t|b_{t-1},a_{t-1}) || p(B_t|b_{t-1},a_{t-1})]. This balances two forces: fit the evidence (term 2) vs. don\'t change your model too much (term 1, KL).',
+    connects: ['entropy', 'bayes_theorem', 'variational_inference', 'free_energy']
+  },
+
+  pomdp: {
+    layer: 3,
+    emoji: '🔭',
+    title: 'POMDP',
+    short: 'A decision framework when you can\'t see everything',
+    difficulty: 3,
+    color: 'var(--gold)',
+    why: 'This is the exact mathematical structure the paper defines: (B, S, A, T, L, R). The entire FEPS model is a way of solving POMDPs using active inference.',
+    analogy: 'Navigation in fog. You know your starting point, you know the map exists, but you can only see 10 feet in front of you. You take actions (turn left, go forward) and get observations (see a tree, feel a road). You maintain a "belief state" — a probability distribution over where you might be. This is EXACTLY what the paper describes.',
+    intuition: 'POMDP = MDP + hidden state. You can\'t directly observe the true state, so you maintain a "belief" — a distribution over what the true state might be. Actions change state (transition T), observations give evidence about state (emission L).',
+    math: 'POMDP = (B, S, A, T, L, R)\n  B = belief states\n  S = observations\n  A = actions\n  T = P(B_t | B_{t-1}, A_{t-1})  ← transitions\n  L = P(S_t | B_t)               ← emissions\n  R = rewards',
+    math_explain: 'The key insight: in a POMDP, the agent never knows the true state. It only has "beliefs" — probability distributions over possible states. Acting on beliefs, not certainties, is the central challenge.',
+    paper_use: 'This is the foundation of the entire paper. Understanding POMDP unlocks Section 2 completely. The FEPS agent solves a POMDP using active inference instead of external rewards.',
+    connects: ['markov_property', 'conditional_probability', 'variational_inference', 'free_energy']
+  },
+
+  policy: {
+    layer: 3,
+    emoji: '🧭',
+    title: 'Policy',
+    short: 'A rule for choosing actions in each state',
+    difficulty: 2,
+    color: 'var(--gold)',
+    why: 'π(A_t|B_t) is how the agent decides what to do. The paper\'s key contribution is deriving optimal policies from minimizing Expected Free Energy — not from reward signals.',
+    analogy: 'A chess strategy is a policy: "if opponent controls center, play on the flanks." A thermostat has a simple policy: "if temperature < 68°F, turn on heat." An RL agent\'s policy maps observations to actions. In the paper, the policy is DERIVED from the free energy — the agent doesn\'t learn rewards, it learns to predict its environment and acts to fulfill preferences.',
+    intuition: 'π(A|B) = "given I\'m in belief state B, what action should I take?" In standard RL, you maximize expected reward. In active inference, you minimize expected free energy. Same structure, different objective.',
+    math: 'π(A_t | B_t) = probability distribution over actions\n\nOptimal policy (in AIF):\nπ*(a|b) ∝ exp(-G_b[a])  \nwhere G = Expected Free Energy',
+    math_explain: 'The exp(-G) means: actions with LOW expected free energy get HIGH probability. The policy naturally favors actions that the agent expects will minimize surprise and fulfill preferences.',
+    paper_use: 'The policy π(A_t|B_t) is defined in Section 2. The entire goal of the paper is to find an interpretable way to derive this policy using Projective Simulation.',
+    connects: ['pomdp', 'expected_free_energy', 'markov_property']
+  },
+
+  // LAYER 4
+  variational_inference: {
+    layer: 4,
+    emoji: '🔧',
+    title: 'Variational Inference',
+    short: 'Approximate Bayesian inference using optimization',
+    difficulty: 4,
+    color: 'var(--accent2)',
+    why: 'The paper explicitly says "learning involves updating through variational inference." VFE (Variational Free Energy) is the thing being minimized. This is the computational heart of the paper.',
+    analogy: 'Exact Bayesian inference is like finding the exact center of mass of an irregularly shaped 3D object by calculus — often impossible. Variational inference is like balancing it on your finger until it finds equilibrium — an approximation that\'s good enough and actually computable. You restrict yourself to a family of "nice" distributions and find the best one.',
+    intuition: 'True Bayesian inference often requires intractable integrals. Variational inference converts this into an optimization problem: find the distribution Q that best approximates the true posterior P. "Best" means minimizing KL divergence. The VFE is an upper bound on the thing you actually want to minimize (surprise).',
+    math: 'True posterior: p(z|x) = p(x|z)p(z) / p(x)  ← intractable\n\nVariational: min_q D_KL(q(z) || p(z|x))\nEquivalent to: min_q VFE(q)\nVFE = D_KL(q||prior) - E_q[log likelihood]',
+    math_explain: 'Minimizing VFE gives you the "closest" tractable distribution to the true posterior. The trick: p(x) is constant (doesn\'t depend on q), so minimizing VFE = minimizing KL from true posterior.',
+    paper_use: 'Equation (2) IS the variational free energy. Minimizing it gives the approximate posterior q_φ(B_t|b_{t-1}, a_{t-1}) — the agent\'s updated belief after observing s_t.',
+    connects: ['bayes_theorem', 'kl_divergence', 'free_energy', 'pomdp']
+  },
+
+  free_energy: {
+    layer: 4,
+    emoji: '⚡',
+    title: 'Variational Free Energy (VFE)',
+    short: 'The thing agents minimize to learn about their world',
+    difficulty: 4,
+    color: 'var(--accent2)',
+    why: 'The entire Free Energy Principle is named after this quantity. The VFE is the loss function for perception — minimizing it updates the world model.',
+    analogy: 'Think of the VFE as a single score that captures how "wrong" your model of the world is. When you\'re surprised — things don\'t match your predictions — VFE goes up. By minimizing VFE, the agent reduces surprise. An agent with zero VFE would never be surprised: it has a perfect model. Karl Friston argues all biological brains are doing this.',
+    intuition: 'VFE = "how bad is my current model at predicting my observations?" It has two competing terms: (1) don\'t change your beliefs too much [KL penalty], (2) your model should predict observations well [likelihood term]. Minimizing VFE balances these.',
+    math: 'F = D_KL[q_φ(B_t|b,a) || p(B_t|b,a)]    ← resist big updates\n    + E_b~q[-log p(s_env_t | b)]           ← predict observations well\n\nAlso: F ≥ -log p(s_env_t)  (lower bound on surprise)',
+    math_explain: 'The second term E[-log p(s|b)] is the expected "surprise" of the observation. -log p = surprise (low probability event = high surprise). Minimizing this term makes the agent better at predicting what it will see.',
+    paper_use: 'This is Equation (2) in the paper — the core perceptual inference equation. Understanding VFE is understanding the paper\'s learning mechanism.',
+    connects: ['variational_inference', 'kl_divergence', 'entropy', 'expected_free_energy']
+  },
+
+  expected_free_energy: {
+    layer: 4,
+    emoji: '🔮',
+    title: 'Expected Free Energy (EFE)',
+    short: 'How to choose actions: minimize future surprise + meet goals',
+    difficulty: 5,
+    color: 'var(--accent2)',
+    why: 'EFE is the action-selection criterion — the thing that drives behavior. Equation (3)/(4) in the paper. Understanding EFE = understanding WHY the agent does what it does.',
+    analogy: 'VFE handles learning (perception). EFE handles action. Imagine you\'re deciding whether to open a mystery box or a known box. EFE weighs: (1) opening the mystery box gives more information [epistemic value], (2) the known box is more likely to contain what you want [pragmatic value]. EFE balances these automatically. The agent picks the action that minimizes EFE — i.e., maximizes information gain + preference satisfaction.',
+    intuition: 'EFE = -[expected information gain] + [expected preference violation]. Minimizing EFE = maximizing curiosity AND goal-satisfaction simultaneously. The two terms in Equation (4) naturally encode exploration (entropy) and exploitation (preferences).',
+    math: 'G_b[a] = E_{b_t,s_t ~ p(B,S|b,a)}[log p(b|b,a) - log p_ref(s,b|b,a)]\n\nDecomposed:\n= -H[B_t|b,a]              ← negative entropy (uncertainty term)\n+ E[surprise under preferences]  ← preference mismatch',
+    math_explain: '-H[B_t|b,a]: higher entropy → lower EFE → prefer more uncertain transitions (exploration). Surprise under preferences: states that match preferences give low surprise (small -log p_ref) → lower EFE → prefer preferred states (exploitation).',
+    paper_use: 'Equations (3) and (4). The FEPS agent selects actions by choosing the action a that minimizes G_b[a]. This is the entire decision-making algorithm in 2 lines of math.',
+    connects: ['free_energy', 'entropy', 'policy', 'pomdp']
+  },
+
+  // LAYER 5
+  feps: {
+    layer: 5,
+    emoji: '🧠',
+    title: 'FEPS Model',
+    short: 'Active inference + interpretable graph-based memory',
+    difficulty: 5,
+    color: 'var(--danger)',
+    why: 'This IS the paper. FEPS combines Projective Simulation (graph memory) with Active Inference (FEP-based action selection) to create an interpretable agent.',
+    analogy: 'Standard AIF agents use neural networks as their world model — a black box. FEPS uses a directed graph where each node is a belief state with semantic meaning you can read and inspect. Think of a neural network as a city where no street is labeled vs. a city with a legible map. FEPS agents show their reasoning through the graph structure.',
+    intuition: 'FEPS = World Model (Projective Simulation graph) + Action Selection (minimize EFE) + Internal Rewards (prediction accuracy). The agent builds a graph of "what leads to what" and uses free energy to navigate it toward preferred states.',
+    math: 'Combining:\n  PS graph G = (V, E, W)     ← world model\n  VFE minimization           ← learning\n  EFE minimization           ← action selection\n  Internal reward = prediction accuracy\n  π*(a|b) ∝ exp(-G_b[a])    ← policy',
+    math_explain: 'The key insight: by using a graph (not a neural net), you can read off exactly why the agent made each decision. The edges represent learned transition probabilities. You can trace the agent\'s "reasoning path" through the graph.',
+    paper_use: 'The entire paper is about this model — how it\'s built (Section 4), how it works algorithmically (Section 5), and how it performs (Section 6). Understanding all previous concepts unlocks this completely.',
+    connects: ['expected_free_energy', 'free_energy', 'pomdp', 'policy', 'variational_inference']
+  }
+};
+
+const learningPath = [
+  { num: 1, title: 'Probability Fundamentals', desc: 'P(X), conditional probability, Bayes\' theorem, random variables. The grammar of uncertainty. Build real examples in Python: simulate coin flips, dice rolls, conditional probs.', duration: '2–3 weeks', resources: ['Seeing Theory (visual textbook)', '3Blue1Brown: Bayes theorem', 'Think Stats (free PDF)'] },
+  { num: 2, title: 'Information Theory Basics', desc: 'Entropy, KL divergence, mutual information, surprise. These are the units of the Free Energy Principle. Understand why -log(p) = surprise.', duration: '2 weeks', resources: ['Visual Information Theory (Olah)', 'Information Theory, Inference, and Learning (MacKay)'] },
+  { num: 3, title: 'Markov Decision Processes', desc: 'States, actions, rewards, transitions. Build a simple gridworld in Python. Understand Bellman equations. Then extend to POMDPs.', duration: '2–3 weeks', resources: ['Sutton & Barto: Intro to RL (free)', 'Gymnasium library (code)'] },
+  { num: 4, title: 'Bayesian Reasoning & Inference', desc: 'Deep dive into Bayes. Conjugate priors, posterior updates, MCMC intuition. Implement Bayesian updating by hand for simple cases.', duration: '3 weeks', resources: ['Bayesian Methods for Hackers (free, code-first)', 'Statistical Rethinking (McElreath)'] },
+  { num: 5, title: 'Variational Inference', desc: 'ELBO, mean-field VI, reparameterization. This is hard but crucial. Build a VAE to internalize the math with code.', duration: '3–4 weeks', resources: ['Blei VI tutorial (pdf)', 'VAE tutorial (Kingma)'] },
+  { num: 6, title: 'Free Energy Principle (FEP)', desc: 'Karl Friston\'s framework. Work through Friston 2010 with explanations. Understand VFE vs EFE. Active inference vs passive inference.', duration: '3–4 weeks', resources: ['A free energy principle for biological systems (Friston)', 'The Genius of Karl Friston (podcast)'] },
+  { num: 7, title: 'Read & Implement the FEPS Paper', desc: 'Now re-read the paper and implement FEPS from scratch in Python. Every symbol should be legible. Test it on the timed response task.', duration: '4–6 weeks', resources: ['arxiv 2411.14991', 'PyMDP library (Python AIF)'] },
+  { num: 8, title: 'Extend & Originate', desc: 'Identify limitations in FEPS. What assumptions does it make? What breaks in realistic settings? The gap between what exists and what\'s needed = your research direction.', duration: 'Ongoing', resources: ['Your own experiments', 'Connected literature'] },
+];
+
+const paperEquations = [
+  {
+    eq: 'p(B₀:t, A₀:t₋₁, S₀:t) = p(B₀, S₀) · ∏ π(Aₜ|Bₜ) · p(Sₜ|Bₜ) · p(Bₜ|Bₜ₋₁, Aₜ₋₁)',
+    label: 'Equation (1): The World Model',
+    plain: 'The joint probability of everything that happened (all beliefs, actions, observations) from time 0 to t, factored into its pieces.',
+    why: 'This is the "full model" — the recipe for how the agent\'s world unfolds over time. Each factor is a separate component: initial state, policy, emission, and transitions.',
+    pieces: [
+      { symbol: 'p(B₀, S₀)', meaning: 'Where did we start? Initial belief and observation.' },
+      { symbol: 'π(Aₜ|Bₜ)', meaning: 'Policy: probability of taking action a given belief b.' },
+      { symbol: 'p(Sₜ|Bₜ)', meaning: 'Emission: probability of observing s when in belief b.' },
+      { symbol: 'p(Bₜ|Bₜ₋₁,Aₜ₋₁)', meaning: 'Transition: probability of reaching belief b given previous belief and action.' },
+    ]
+  },
+  {
+    eq: 'F = D_KL[q_φ(Bₜ|b,a) || p(Bₜ|b,a)] + E_{b~q}[−log p(sᵉⁿᵛₜ | b)]',
+    label: 'Equation (2): Variational Free Energy',
+    plain: 'The "learning cost" — how wrong is our current model? Two competing pressures: don\'t update beliefs too much (KL term), but do predict observations accurately (likelihood term).',
+    why: 'By minimizing F, the agent updates its world model to explain new observations while staying close to its prior beliefs. This is the perceptual inference step.',
+    pieces: [
+      { symbol: 'D_KL[q||p]', meaning: 'KL divergence: penalty for changing beliefs too drastically from prior.' },
+      { symbol: 'E[−log p(sᵉⁿᵛ|b)]', meaning: 'Expected surprise: how shocked is the model by what it actually observed? Lower = better prediction.' },
+    ]
+  },
+  {
+    eq: 'G_b[a] = −H[Bₜ|b,a] + E_{s,b~p}[Sₚᵣₑf(s,b|b,a)]',
+    label: 'Equation (4): Expected Free Energy',
+    plain: 'The "action score" — how good is action a expected to be? Balances two drives: seek information (entropy term) and fulfill preferences (utility term).',
+    why: 'This is the equation that drives BEHAVIOR. The agent picks the action that minimizes G. Low G = the action is both informative AND aligned with preferences.',
+    pieces: [
+      { symbol: '−H[Bₜ|b,a]', meaning: 'Negative entropy: prefer actions that create UNCERTAIN future states → maximizes information gain → exploration.' },
+      { symbol: 'E[S_pref(s,b|b,a)]', meaning: 'Expected preference surprise: how much does this action move toward preferred states? Low = good match to goals → exploitation.' },
+    ]
+  }
+];
+
+// ── Render concept cards ──
+function renderConcepts() {
+  [1,2,3,4,5].forEach(layer => {
+    const grid = document.getElementById('layer'+layer);
+    Object.entries(concepts)
+      .filter(([k,v]) => v.layer === layer)
+      .forEach(([key, c]) => {
+        const card = document.createElement('div');
+        card.className = 'concept-card';
+        card.style.setProperty('--card-color', c.color);
+        card.id = 'card-'+key;
+        card.innerHTML = `
+          <div class="card-emoji">${c.emoji}</div>
+          <div class="card-title">${c.title}</div>
+          <div class="card-desc">${c.short}</div>
+          <div class="card-meta">
+            <span class="difficulty diff-${c.difficulty}">Level ${c.difficulty}/5</span>
+          </div>
+        `;
+        card.onclick = () => openDetail(key);
+        grid.appendChild(card);
+      });
+  });
+}
+
+let currentDetail = null;
+
+function openDetail(key) {
+  const c = concepts[key];
+  const container = document.getElementById('detail-container');
+  
+  // Scroll to top of detail
+  container.innerHTML = `
+    <div class="detail-panel" style="border-color: ${c.color}; margin-bottom: 28px;">
+      <button class="close-btn" onclick="document.getElementById('detail-container').innerHTML=''">✕</button>
+      <div class="detail-title">${c.emoji} ${c.title}</div>
+      <div class="detail-subtitle">Why you need this: ${c.why}</div>
+      
+      <div class="detail-sections">
+        <div class="detail-block analogy-box">
+          <h4>🎯 Analogy First</h4>
+          <p>${c.analogy}</p>
+        </div>
+        <div class="detail-block">
+          <h4>💡 The Intuition</h4>
+          <p>${c.intuition}</p>
+        </div>
+        <div class="detail-block math-box">
+          <h4>⚗️ The Math</h4>
+          <div class="equation">${c.math}</div>
+          <p class="eq-explain">${c.math_explain}</p>
+        </div>
+        <div class="detail-block">
+          <h4>📄 In the Paper</h4>
+          <p class="paper-link-box">${c.paper_use}</p>
+        </div>
+      </div>
+      
+      ${c.connects.length ? `
+        <div style="margin-top: 16px;">
+          <div style="font-size: 12px; color: var(--muted); margin-bottom: 8px; font-family: 'JetBrains Mono'; text-transform: uppercase; letter-spacing: 1.5px;">Connects to →</div>
+          <div class="connections">
+            ${c.connects.map(k => `<span class="conn-chip" onclick="openDetail('${k}')">${concepts[k]?.emoji || ''} ${concepts[k]?.title || k}</span>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+      
+      <button class="mastery-btn" onclick="markMastered('${key}', this)">Mark as Understood ✓</button>
+    </div>
+  `;
+  
+  container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function markMastered(key, btn) {
+  const card = document.getElementById('card-'+key);
+  if (card) card.classList.toggle('mastered');
+  const mastered = JSON.parse(localStorage.getItem('mastered') || '[]');
+  if (mastered.includes(key)) {
+    mastered.splice(mastered.indexOf(key), 1);
+    btn.textContent = 'Mark as Understood ✓';
+  } else {
+    mastered.push(key);
+    btn.textContent = 'Marked ✓ (click to undo)';
+  }
+  localStorage.setItem('mastered', JSON.stringify(mastered));
+  updateProgress();
+}
+
+function updateProgress() {
+  const mastered = JSON.parse(localStorage.getItem('mastered') || '[]');
+  const total = Object.keys(concepts).length;
+  const pct = Math.round((mastered.length / total) * 100);
+  const bar = document.getElementById('progress-bar');
+  const label = document.getElementById('progress-label');
+  if (bar) bar.style.width = pct + '%';
+  if (label) label.textContent = `${mastered.length} / ${total} concepts understood (${pct}%)`;
+  
+  // Re-mark cards
+  Object.keys(concepts).forEach(key => {
+    const card = document.getElementById('card-'+key);
+    if (card) {
+      if (mastered.includes(key)) card.classList.add('mastered');
+      else card.classList.remove('mastered');
+    }
+  });
+}
+
+// ── Learning Path ──
+function renderPath() {
+  const mastered = JSON.parse(localStorage.getItem('mastered') || '[]');
+  const total = Object.keys(concepts).length;
+  const pct = Math.round((mastered.length / total) * 100);
+  
+  document.getElementById('progress-area').innerHTML = `
+    <div class="progress-section">
+      <h3>Concept Map Progress</h3>
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="progress-bar" style="width: ${pct}%"></div>
+      </div>
+      <div class="progress-label">
+        <span id="progress-label">${mastered.length} / ${total} concepts understood (${pct}%)</span>
+        <span>${pct < 40 ? '🌱 Building foundation' : pct < 70 ? '📈 Making progress' : pct < 100 ? '🚀 Almost there' : '🎓 Paper ready!'}</span>
+      </div>
+    </div>
+  `;
+
+  const list = document.getElementById('path-list');
+  learningPath.forEach(step => {
+    const el = document.createElement('div');
+    el.className = 'path-item';
+    el.innerHTML = `
+      <div class="path-num">${step.num}</div>
+      <div class="path-content">
+        <h4>${step.title}</h4>
+        <p>${step.desc}</p>
+        <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px;">
+          ${step.resources.map(r => `<span style="font-size:11px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 5px; padding: 3px 9px; color: var(--muted);">${r}</span>`).join('')}
+        </div>
+      </div>
+      <div class="path-duration">${step.duration}</div>
+    `;
+    list.appendChild(el);
+  });
+}
+
+// ── Paper Decoder ──
+function renderPaperDecoder() {
+  const container = document.getElementById('paper-decoder');
+  paperEquations.forEach((eq, i) => {
+    container.innerHTML += `
+      <div class="detail-panel" style="margin-bottom: 20px; border-color: var(--accent${i===0?'3':i===1?'':'2'});">
+        <div style="font-family: 'JetBrains Mono'; font-size: 11px; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1.5px;">${eq.label}</div>
+        <div class="equation" style="font-family: 'JetBrains Mono'; font-size: 13px; color: var(--gold); background: rgba(247,196,106,0.08); padding: 14px 16px; border-radius: 8px; margin-bottom: 16px; line-height: 1.8;">${eq.eq}</div>
+        <div class="detail-sections">
+          <div class="detail-block analogy-box" style="grid-column: 1/-1;">
+            <h4>📖 In Plain English</h4>
+            <p>${eq.plain}</p>
+          </div>
+          <div class="detail-block">
+            <h4>🎯 Why This Equation Exists</h4>
+            <p>${eq.why}</p>
+          </div>
+          <div class="detail-block">
+            <h4>🔩 Breaking It Down</h4>
+            ${eq.pieces.map(p => `<div style="margin-bottom: 10px;"><span style="font-family: 'JetBrains Mono'; font-size: 12px; color: var(--gold);">${p.symbol}</span><br><span style="font-size: 12px; color: var(--muted);">${p.meaning}</span></div>`).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// Init
+renderConcepts();
+renderPath();
+renderPaperDecoder();
+
+// Restore mastered state
+const mastered = JSON.parse(localStorage.getItem('mastered') || '[]');
+mastered.forEach(key => {
+  const card = document.getElementById('card-'+key);
+  if (card) card.classList.add('mastered');
+});
+</script>
+</body>
+</html>

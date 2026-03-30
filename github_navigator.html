@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Git & GitHub Navigator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #0a0f0a;
+  --surface: #0f1a0f;
+  --surface2: #141f14;
+  --border: #1e3a1e;
+  --green: #39ff14;
+  --green2: #00e676;
+  --green3: #69ff47;
+  --amber: #ffd600;
+  --red: #ff5252;
+  --blue: #40c4ff;
+  --muted: #4a7a4a;
+  --text: #c8e6c9;
+  --dim: #2e5c2e;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* scanline effect */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(57,255,20,0.015) 2px, rgba(57,255,20,0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(57,255,20,0.05) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+/* ── HEADER ── */
+header { padding: 32px 0 0; }
+.terminal-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px 10px 0 0;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot-r { background: #ff5f56; }
+.dot-y { background: #ffbd2e; }
+.dot-g { background: #27c93f; }
+.terminal-title { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--muted); margin-left: auto; margin-right: auto; }
+
+.terminal-body {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  padding: 24px;
+  margin-bottom: 0;
+}
+
+.prompt { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--muted); }
+.prompt .user { color: var(--green2); }
+.prompt .path { color: var(--blue); }
+.prompt .sym { color: var(--green); }
+.prompt .cmd { color: var(--text); }
+
+.hero-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--green);
+  margin: 16px 0 8px;
+  letter-spacing: -1px;
+  text-shadow: 0 0 30px rgba(57,255,20,0.4);
+}
+.hero-sub { font-size: 14px; color: var(--muted); line-height: 1.6; max-width: 560px; }
+.hero-sub strong { color: var(--green2); }
+
+/* ── TABS ── */
+.tabs {
+  display: flex; gap: 2px;
+  margin: 24px 0 0;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  color: var(--muted);
+  cursor: pointer;
+  position: relative; bottom: -1px;
+  border-radius: 6px 6px 0 0;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  background: var(--surface);
+  border-color: var(--border);
+  border-bottom-color: var(--surface);
+  color: var(--green);
+}
+
+/* ── PANELS ── */
+.panel { display: none; padding: 28px 0; }
+.panel.active { display: block; }
+
+/* ── SECTION LABEL ── */
+.sec-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: var(--dim);
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px;
+}
+.sec-label::before { content: '##'; color: var(--green); }
+.sec-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── CONCEPT GRID ── */
+.concept-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 36px;
+}
+
+.c-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--card-accent, var(--green));
+  border-radius: 0 8px 8px 0;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.c-card:hover {
+  border-color: var(--card-accent, var(--green));
+  background: var(--surface2);
+  transform: translateX(4px);
+  box-shadow: -4px 0 16px rgba(57,255,20,0.1);
+}
+.c-card.done { opacity: 0.5; }
+.c-card.done::after {
+  content: '✓ DONE';
+  position: absolute; top: 10px; right: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; color: var(--green2);
+}
+
+.c-icon { font-size: 22px; margin-bottom: 8px; }
+.c-title { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: var(--green2); margin-bottom: 4px; }
+.c-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.c-badge {
+  display: inline-block;
+  margin-top: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid;
+}
+.badge-git { color: var(--amber); border-color: rgba(255,214,0,0.3); background: rgba(255,214,0,0.07); }
+.badge-github { color: var(--blue); border-color: rgba(64,196,255,0.3); background: rgba(64,196,255,0.07); }
+.badge-team { color: #ce93d8; border-color: rgba(206,147,216,0.3); background: rgba(206,147,216,0.07); }
+.badge-advanced { color: var(--red); border-color: rgba(255,82,82,0.3); background: rgba(255,82,82,0.07); }
+
+/* ── DETAIL PANEL ── */
+.detail {
+  background: var(--surface);
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 28px;
+  animation: fadeIn 0.2s ease;
+  box-shadow: 0 0 40px rgba(57,255,20,0.06);
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.detail-title-row { display: flex; align-items: center; gap: 12px; }
+.detail-title { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 700; color: var(--green); }
+.detail-close {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); width: 26px; height: 26px;
+  border-radius: 4px; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; font-family: 'IBM Plex Mono', monospace;
+  flex-shrink: 0;
+}
+.detail-close:hover { background: var(--red); color: white; border-color: var(--red); }
+
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 640px) { .detail-grid { grid-template-columns: 1fr; } }
+
+.d-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+}
+.d-block h4 {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--dim);
+  margin-bottom: 10px;
+}
+.d-block p { font-size: 13px; line-height: 1.7; color: var(--text); }
+
+.d-full { grid-column: 1 / -1; }
+
+.code-block {
+  background: #050e05;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-x: auto;
+}
+.code-block .comment { color: var(--dim); }
+.code-block .cmd-line::before { content: '$ '; color: var(--green); }
+.code-block .out { color: var(--muted); padding-left: 14px; }
+.code-block .flag { color: var(--amber); }
+.code-block .str { color: var(--green2); }
+.code-block .url { color: var(--blue); }
+
+.analogy-block {
+  grid-column: 1 / -1;
+  background: rgba(57,255,20,0.04);
+  border: 1px solid rgba(57,255,20,0.2);
+  border-left: 3px solid var(--green);
+}
+.analogy-block h4 { color: var(--green); }
+
+.flow-diagram {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 16px;
+  background: #050e05;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+}
+.flow-step {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.flow-step.active-step { border-color: var(--green); color: var(--green); }
+.flow-arrow { color: var(--dim); font-size: 16px; }
+
+.mark-btn {
+  margin-top: 18px;
+  padding: 8px 18px;
+  background: transparent;
+  border: 1px solid var(--green);
+  color: var(--green);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.mark-btn:hover { background: var(--green); color: var(--bg); }
+
+/* ── WORKFLOW VIZ ── */
+.workflow-container { margin-bottom: 28px; }
+.wf-steps { display: flex; gap: 0; overflow-x: auto; padding-bottom: 8px; }
+.wf-step {
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  position: relative;
+  min-width: 160px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.wf-step:not(:last-child)::after {
+  content: '→';
+  position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
+  color: var(--green); font-size: 18px; z-index: 2;
+}
+.wf-step:hover { border-color: var(--green); background: var(--surface2); }
+.wf-step .s-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--green); margin-bottom: 6px; }
+.wf-step .s-cmd { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--green2); font-weight: 600; }
+.wf-step .s-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* ── PATH ── */
+.path-item {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 16px;
+  align-items: start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green);
+  border-radius: 0 8px 8px 0;
+  padding: 18px 20px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.path-item:hover { transform: translateX(4px); border-color: var(--green); }
+.path-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+}
+.path-item h4 { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--green2); margin-bottom: 6px; }
+.path-item p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.path-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.path-tag { font-family: 'IBM Plex Mono', monospace; font-size: 10px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 3px; color: var(--dim); }
+.path-dur { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--dim); white-space: nowrap; }
+
+/* ── PROGRESS ── */
+.prog-bar-outer { height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 6px; }
+.prog-bar-inner { height: 100%; background: linear-gradient(90deg, var(--green), var(--green2)); border-radius: 2px; transition: width 0.5s; }
+.prog-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+
+/* ── CHEAT SHEET ── */
+.cheat-section { margin-bottom: 28px; }
+.cheat-section h3 { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--green); margin-bottom: 12px; }
+.cheat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+.cheat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 10px 14px;
+}
+.cheat-cmd { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--amber); flex-shrink: 0; }
+.cheat-what { font-size: 12px; color: var(--muted); }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="terminal-bar">
+    <div class="dot dot-r"></div>
+    <div class="dot dot-y"></div>
+    <div class="dot dot-g"></div>
+    <div class="terminal-title">git-navigator — bash — 80×24</div>
+  </div>
+  <div class="terminal-body">
+    <div class="prompt">
+      <span class="user">dev</span><span style="color:var(--muted)">@</span><span class="user">cloudwarriors</span>
+      <span style="color:var(--muted)">:</span><span class="path">~/learning</span>
+      <span class="sym"> $ </span><span class="cmd">./git-navigator --interactive</span>
+    </div>
+    <div class="hero-title">Git &amp; GitHub Navigator</div>
+    <p class="hero-sub">From <strong>zero to pull request</strong>. Learn version control the way it actually works — with real commands, real analogies, and a clear mental model of what's happening.</p>
+    <div style="margin-top: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--dim);">
+      💡 Host this file free: GitHub Pages · Netlify · Vercel · any static host
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('concepts',this)">concepts/</button>
+      <button class="tab" onclick="switchTab('workflow',this)">workflow/</button>
+      <button class="tab" onclick="switchTab('path',this)">learning-path/</button>
+      <button class="tab" onclick="switchTab('cheatsheet',this)">cheatsheet/</button>
+    </div>
+  </div>
+</header>
+
+<!-- CONCEPTS -->
+<div class="panel active" id="tab-concepts">
+  <div id="detail-zone"></div>
+
+  <div class="sec-label">foundation — start here</div>
+  <div class="concept-grid" id="layer-foundation"></div>
+
+  <div class="sec-label">local git — daily work</div>
+  <div class="concept-grid" id="layer-local"></div>
+
+  <div class="sec-label">branching — parallel work</div>
+  <div class="concept-grid" id="layer-branching"></div>
+
+  <div class="sec-label">github — remote collaboration</div>
+  <div class="concept-grid" id="layer-remote"></div>
+
+  <div class="sec-label">team workflows — professional</div>
+  <div class="concept-grid" id="layer-team"></div>
+</div>
+
+<!-- WORKFLOW -->
+<div class="panel" id="tab-workflow">
+  <div class="sec-label">the standard github workflow</div>
+  <p style="font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.7;">This is the loop you'll do <em>every single day</em> as a developer. Click any step to understand it deeply.</p>
+
+  <div class="workflow-container">
+    <div class="wf-steps" id="wf-steps"></div>
+  </div>
+  <div id="wf-detail"></div>
+
+  <div class="sec-label" style="margin-top: 32px;">git internals — what's really happening</div>
+  <div class="d-block d-full" style="padding: 20px;">
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 2.2; color: var(--muted);">
+      <div><span style="color:var(--green2)">Working Directory</span> → <span style="color:var(--amber)">git add</span> → <span style="color:var(--blue)">Staging Area (Index)</span> → <span style="color:var(--amber)">git commit</span> → <span style="color: #ce93d8;">Local Repository (.git/)</span> → <span style="color:var(--amber)">git push</span> → <span style="color:var(--green)">Remote (GitHub)</span></div>
+      <div style="font-size: 11px; margin-top: 8px; color: var(--dim);"># Three trees: your files · what you're about to commit · the full history</div>
+    </div>
+  </div>
+</div>
+
+<!-- PATH -->
+<div class="panel" id="tab-path">
+  <div class="sec-label">your learning path</div>
+  <div style="margin-bottom: 8px;">
+    <div class="prog-bar-outer"><div class="prog-bar-inner" id="prog-bar" style="width:0%"></div></div>
+    <div class="prog-label" id="prog-label">0 / 0 concepts learned</div>
+  </div>
+  <div id="path-list" style="margin-top: 20px;"></div>
+</div>
+
+<!-- CHEAT SHEET -->
+<div class="panel" id="tab-cheatsheet">
+  <div id="cheat-content"></div>
+</div>
+</div>
+
+<script>
+const concepts = {
+  // FOUNDATION
+  what_is_git: {
+    layer: 'foundation', icon: '📦', title: 'What is Git?', desc: 'A tool that tracks every change to your files over time', badge: 'badge-git', badgeText: 'GIT',
+    analogy: 'Git is like "Track Changes" in Google Docs — but for your entire project folder, and so powerful that millions of teams use it. Every time you save a "snapshot" (commit), Git records exactly what changed. You can always go back to any snapshot. It\'s a time machine for your code.',
+    intuition: 'Without Git: you save files like "report_v1.txt", "report_v2.txt", "report_FINAL.txt", "report_FINAL_REAL.txt". With Git: one file, infinite history, all differences tracked, all recoverable.',
+    code: `# Check if git is installed
+git --version
+
+# Configure who you are (do this once)
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"`,
+    flow: ['Your Files', 'git init', 'Git tracks them', 'git commit', 'Snapshot saved', 'git log', 'See all snapshots'],
+    paperUse: 'Every professional dev uses Git daily. Without it, collaborating on code is chaos. With it, you have a safety net for everything you build.'
+  },
+  what_is_github: {
+    layer: 'foundation', icon: '☁️', title: 'What is GitHub?', desc: 'A website that hosts your Git repositories online', badge: 'badge-github', badgeText: 'GITHUB',
+    analogy: 'Git is like your personal journal. GitHub is like publishing that journal to the cloud so your team can read it, add to it, and you can never lose it. Git ≠ GitHub. Git is the tool. GitHub is one of many websites that stores Git repos (GitLab and Bitbucket are alternatives).',
+    intuition: 'GitHub adds: cloud backup, team collaboration, pull requests (code review), issue tracking, CI/CD automation. Think of GitHub as Google Drive but specifically designed for code, with built-in code review workflows.',
+    code: `# Clone (download) a repo from GitHub
+git clone https://github.com/username/repo-name.git
+
+# This creates a folder with all the code + full history
+cd repo-name
+git log --oneline  # see all commits`,
+    flow: ['Local Git repo', 'git push', 'GitHub.com', 'Team member', 'git pull', 'Their local repo'],
+    paperUse: 'GitHub is where almost all open-source AI/ML code lives. Being fluent here lets you contribute to transformers, pytorch, langchain, etc.'
+  },
+  repository: {
+    layer: 'foundation', icon: '🗃️', title: 'Repository (Repo)', desc: 'A folder that Git is tracking', badge: 'badge-git', badgeText: 'GIT',
+    analogy: 'A repository is just a regular folder with a secret ".git" subfolder that records all the history. That hidden .git folder IS the magic — it contains the entire timeline of your project. Delete it and you just have files. Keep it and you have a time machine.',
+    intuition: 'One repo = one project. Every team member has their own copy (clone) of the same repo on their machine. GitHub hosts the "official" copy. You sync with git push and git pull.',
+    code: `# Start a new repo in current folder
+git init
+
+# See the hidden .git folder
+ls -la  # shows .git/
+
+# Check the status of your repo (use this constantly)
+git status`,
+    flow: ['Empty folder', 'git init', '.git/ created', 'Add files', 'git add + commit', 'Repo with history'],
+    paperUse: 'Your PCC v1 spec should be in a repo. Every project should start with git init or be cloned from GitHub.'
+  },
+
+  // LOCAL
+  commit: {
+    layer: 'local', icon: '📸', title: 'Commits', desc: 'A saved snapshot of your project at a point in time', badge: 'badge-git', badgeText: 'GIT',
+    analogy: 'A commit is like a checkpoint in a video game. You can always go back to any checkpoint. Each commit has: a unique ID (like abc1234), a message ("fixed login bug"), the author, and the exact diff of what changed. Think of your project history as a chain of commits, each pointing to the one before it.',
+    intuition: 'Commit often. The cardinal rule: commit when something works. Commit messages are for your future self. "fix stuff" tells you nothing at 2am six months later. "fix: null pointer in auth middleware when user has no email" is gold.',
+    code: `# Stage changes (tell git "include these in next commit")
+git add filename.py       # specific file
+git add .                 # everything changed
+
+# Create the commit (the snapshot)
+git commit -m "feat: add user authentication"
+
+# See all commits
+git log --oneline --graph --all`,
+    flow: ['Edit files', 'git add .', 'Staged', 'git commit -m "..."', 'Committed', 'git push', 'On GitHub'],
+    paperUse: 'Good commit history is documentation. For research code, commit each experiment variant separately so you can reproduce results exactly.'
+  },
+  staging: {
+    layer: 'local', icon: '🎭', title: 'Staging Area', desc: 'A prep zone where you choose what goes into your next commit', badge: 'badge-git', badgeText: 'GIT',
+    analogy: 'Imagine you\'re packing boxes to move. Your apartment is the working directory (all your stuff). The staging area is like the boxes you\'ve packed but not yet put on the truck. The commit is loading the truck. This lets you make 10 changes but only commit 3 of them in one logical unit.',
+    intuition: 'git add moves changes from "working directory" to "staging area (index)". git commit moves from staging area to the repo history. git status shows you exactly where everything is.',
+    code: `# See what's staged vs unstaged
+git status
+
+# Stage specific lines (interactive!)
+git add -p filename.py
+
+# Unstage something (undo add)
+git restore --staged filename.py
+
+# See what's staged vs committed
+git diff --staged`,
+    flow: ['Changes in files', 'git add', 'Staged (Index)', 'git commit', 'In repo history'],
+    paperUse: 'Staging lets you craft clean, logical commits even when your edits are messy. One big refactor can be split into clean, reviewable commits.'
+  },
+
+  // BRANCHING
+  branches: {
+    layer: 'branching', icon: '🌿', title: 'Branches', desc: 'Parallel timelines of your project', badge: 'badge-git', badgeText: 'GIT',
+    analogy: 'Imagine the "main" timeline of your movie. You want to test a radical plot twist without ruining the original. You branch off, try it, and if it works, merge it back. If it fails, just delete the branch — main is untouched. Multiple developers can work on different features simultaneously in separate branches, then combine their work.',
+    intuition: 'Branches are cheap and fast in Git (just a pointer to a commit). Create them liberally. The convention: main (or master) is always stable/deployable. Feature branches are where experiments happen.',
+    code: `# Create and switch to a new branch
+git checkout -b feature/user-auth
+# or (modern syntax):
+git switch -c feature/user-auth
+
+# See all branches
+git branch -a
+
+# Switch between branches
+git switch main
+git switch feature/user-auth
+
+# Delete a branch (after merging)
+git branch -d feature/user-auth`,
+    flow: ['main branch', 'git checkout -b feature', 'feature branch', 'commits on feature', 'git merge', 'back to main'],
+    paperUse: 'Branch per experiment. "experiment/longer-context-window", "fix/memory-leak", "feature/streaming-output". Never experiment on main.'
+  },
+  merging: {
+    layer: 'branching', icon: '🔀', title: 'Merging & Rebasing', desc: 'Combining work from different branches', badge: 'badge-git', badgeText: 'GIT',
+    analogy: 'Merge = braid two rivers into one, keeping both banks\' history. Rebase = pretend your branch started from the tip of main (rewrites history to be linear). Merge preserves true history. Rebase makes history cleaner but is "lying" about when things happened. Teams usually: rebase locally, merge for PRs.',
+    intuition: 'Merge conflicts happen when two branches changed the same line differently. Git can\'t decide which is right — you have to choose. Git shows you both versions with <<<< ==== >>>> markers. Pick the right one, remove the markers, then git add + commit.',
+    code: `# Merge feature branch INTO main
+git switch main
+git merge feature/user-auth
+
+# Rebase feature on top of latest main
+git switch feature/user-auth
+git rebase main
+
+# If merge conflict: open the file, fix it, then:
+git add conflicted-file.py
+git commit  # completes the merge
+
+# Abort if you're overwhelmed:
+git merge --abort`,
+    flow: ['main', 'feature branch', 'git switch main', 'git merge feature', 'combined history'],
+    paperUse: 'Understanding merge conflicts is essential for team work. The more people on a codebase, the more conflicts. They\'re not scary — just a decision to make.'
+  },
+
+  // REMOTE / GITHUB
+  remote: {
+    layer: 'remote', icon: '🌐', title: 'Remote & Push/Pull', desc: 'Syncing your local repo with GitHub', badge: 'badge-github', badgeText: 'GITHUB',
+    analogy: 'Your local repo and GitHub are separate copies. git push sends your commits up to GitHub (like saving to the cloud). git pull brings down others\' commits to you (like syncing from the cloud). git fetch checks what\'s new on GitHub but doesn\'t merge it yet — like checking email without opening it.',
+    intuition: 'Remote = a named URL to another copy of the repo. "origin" is the conventional name for your GitHub remote. git push origin main = send my local main branch to the "origin" remote.',
+    code: `# See your remotes
+git remote -v
+
+# Add GitHub as remote (when starting fresh)
+git remote add origin https://github.com/user/repo.git
+
+# Push your branch to GitHub
+git push origin main
+git push origin feature/user-auth
+
+# Pull latest changes from GitHub
+git pull origin main
+
+# Fetch without merging (safe inspection)
+git fetch origin`,
+    flow: ['local commits', 'git push origin main', 'GitHub repo', 'teammate git pull', 'their local repo'],
+    paperUse: 'git push is how you share your work. git pull is how you get others\' work. Do both constantly. "It works on my machine" is eliminated by proper Git workflows.'
+  },
+  pull_request: {
+    layer: 'remote', icon: '🔍', title: 'Pull Requests (PRs)', desc: 'A request to merge your branch into main, with code review', badge: 'badge-github', badgeText: 'GITHUB',
+    analogy: 'A pull request (PR) is like submitting a homework assignment for grading before it gets added to the textbook. You say "I made these changes, please review and merge them." Teammates can comment on specific lines, request changes, approve, and then merge. PRs are the standard unit of team code collaboration.',
+    intuition: 'Workflow: create branch → make commits → push to GitHub → open PR → get review → merge to main. PRs create a permanent record of why changes were made. They\'re also how you contribute to open-source projects.',
+    code: `# 1. Push your branch to GitHub
+git push origin feature/my-feature
+
+# 2. Go to GitHub.com — you'll see a yellow banner
+#    "Compare & pull request" — click it
+
+# 3. Write a clear title and description
+#    What does it do? Why? Any concerns?
+
+# 4. Request reviewers, add labels, link issues
+
+# 5. After approval, merge (usually on GitHub UI)
+# Then locally:
+git switch main
+git pull origin main          # get the merged changes
+git branch -d feature/my-feature  # clean up`,
+    flow: ['push branch', 'GitHub.com', 'Open PR', 'Code Review', 'Approved', 'Merge to main'],
+    paperUse: 'PRs are how AI teams collaborate on research codebases. Learning to write good PR descriptions and give/receive code review is a career superpower.'
+  },
+
+  // TEAM
+  gitignore: {
+    layer: 'team', icon: '🙈', title: '.gitignore', desc: 'Tell Git which files to never track', badge: 'badge-team', badgeText: 'WORKFLOW',
+    analogy: 'You don\'t want Git tracking your API keys, compiled files, or 5GB model weights. .gitignore is a list of patterns for files Git should pretend don\'t exist. Think of it as a "don\'t pack this when moving" list.',
+    intuition: 'Always gitignore: .env files (secrets!), node_modules/, __pycache__/, *.pyc, .DS_Store, virtual environments, build outputs, large data files. GitHub has templates for every language at github.com/github/gitignore.',
+    code: `# .gitignore file contents:
+.env               # never commit secrets!
+*.pyc
+__pycache__/
+.venv/
+node_modules/
+*.log
+.DS_Store
+*.pkl              # large model files
+data/raw/          # large datasets
+
+# Check what's being ignored
+git check-ignore -v filename
+
+# Add and commit your .gitignore
+git add .gitignore
+git commit -m "chore: add gitignore"`,
+    flow: ['.gitignore created', 'list patterns', 'Git ignores matched files', 'safe to git add .'],
+    paperUse: 'NEVER commit API keys, passwords, or model weights to GitHub. Add .gitignore before your first commit on every project.'
+  },
+  issues: {
+    layer: 'team', icon: '🐛', title: 'Issues & Projects', desc: 'GitHub\'s built-in task tracking', badge: 'badge-github', badgeText: 'GITHUB',
+    analogy: 'Issues are like sticky notes on a digital kanban board. "Bug: login crashes on mobile", "Feature: add dark mode", "Research: evaluate new embedding model". Each issue gets a number (#42), can be assigned, labeled, and linked to a PR. Close an issue from a commit with "fixes #42" in the message.',
+    intuition: 'Issues + PRs = a complete project management system. Use GitHub Projects (kanban board) to organize issues into sprints. Everything is searchable and permanent.',
+    code: `# Link a commit to an issue
+git commit -m "fix: resolve null pointer — fixes #42"
+# GitHub will auto-close issue #42 when this merges to main
+
+# Reference an issue without closing
+git commit -m "feat: partial work toward #15"
+
+# From PR description:
+# "This PR resolves #23 and implements the feature from #31"`,
+    flow: ['New Issue #42', 'Create branch', 'Make commits', 'PR references #42', 'Merge PR', 'Issue auto-closed'],
+    paperUse: 'For research projects, use issues to track experiments, paper references to implement, and bugs in your research code. Treat your codebase like a product.'
+  },
+  actions: {
+    layer: 'team', icon: '⚙️', title: 'GitHub Actions (CI/CD)', desc: 'Automate testing, deployment, and workflows', badge: 'badge-advanced', badgeText: 'ADVANCED',
+    analogy: 'GitHub Actions runs code automatically when something happens in your repo. "Every time someone opens a PR, run the test suite." "Every time I push to main, deploy to production." "Every night, retrain the model on new data." It\'s like hiring a robot assistant that watches your repo and executes scripts on events.',
+    intuition: 'Actions = YAML files in .github/workflows/. Each file defines triggers (push, PR, schedule) and jobs (steps to run). Free for public repos, limited free minutes for private. This is how production AI teams automate everything.',
+    code: `# .github/workflows/test.yml
+name: Run Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: pytest tests/`,
+    flow: ['Push to GitHub', 'Action triggered', 'Runner spins up', 'Runs your steps', 'Pass/Fail badge'],
+    paperUse: 'For ML research: auto-run evals on every commit. For production AI: auto-deploy model updates. Actions turns your GitHub repo into an automation platform.'
+  }
+};
+
+const workflowSteps = [
+  { step: '01', cmd: 'git clone', label: 'Get the code', key: 'clone',
+    explain: 'Download a copy of the repository from GitHub to your machine. You only do this once per project. Creates a folder with all the code and full history.',
+    code: 'git clone https://github.com/org/repo.git\ncd repo' },
+  { step: '02', cmd: 'git checkout -b', label: 'Create a branch', key: 'branch',
+    explain: 'Never work directly on main. Create a new branch named after what you\'re building. This keeps your work isolated until it\'s ready.',
+    code: 'git checkout -b feature/my-feature\n# or: git switch -c feature/my-feature' },
+  { step: '03', cmd: 'edit files', label: 'Do your work', key: 'edit',
+    explain: 'Write code, edit files, break things, fix things. Git is watching everything but not tracking anything yet. Your working directory is your sandbox.',
+    code: '# Edit your files in VS Code, vim, etc.\n# git status shows what changed' },
+  { step: '04', cmd: 'git add .', label: 'Stage changes', key: 'stage',
+    explain: 'Tell Git which changes to include in the next commit. "git add ." stages everything. "git add filename" stages one file. "git add -p" lets you pick individual lines.',
+    code: 'git add .\n# or specific files:\ngit add src/feature.py tests/test_feature.py' },
+  { step: '05', cmd: 'git commit', label: 'Save snapshot', key: 'commit',
+    explain: 'Create a permanent snapshot. The message matters — write it for your future self. Conventional format: "type: description" where type is feat/fix/docs/refactor/test/chore.',
+    code: 'git commit -m "feat: add user authentication module"' },
+  { step: '06', cmd: 'git push', label: 'Upload to GitHub', key: 'push',
+    explain: 'Send your local commits to GitHub. The first time, use --set-upstream. After that, just git push.',
+    code: 'git push -u origin feature/my-feature\n# subsequent pushes:\ngit push' },
+  { step: '07', cmd: 'open PR', label: 'Request review', key: 'pr',
+    explain: 'Go to GitHub.com, open a Pull Request from your branch to main. Write a description. Add reviewers. This starts the code review process.',
+    code: '# On GitHub.com:\n# Compare & Pull Request → fill in details\n# → Request reviewers → Submit' },
+  { step: '08', cmd: 'git pull', label: 'Stay in sync', key: 'pull',
+    explain: 'While you work, others push changes to main. Regularly pull to stay up to date and avoid painful merge conflicts later.',
+    code: 'git switch main\ngit pull origin main\ngit switch feature/my-feature\ngit rebase main  # rebase your work on top' },
+];
+
+const learningPath = [
+  { num: '01', title: 'Install + First Repo', desc: 'Install git, configure name/email. Create a folder, git init, create a README.md, make your first commit. See git log. Understand what .git/ is.', duration: '1 day', tags: ['git init', 'git add', 'git commit', 'git log'] },
+  { num: '02', title: 'Work Locally Every Day', desc: 'Practice the add/commit cycle on a real project. Use git status obsessively. Learn git diff. Write good commit messages. Use git stash when you need to switch context.', duration: '1 week', tags: ['git status', 'git diff', 'git stash', 'git log'] },
+  { num: '03', title: 'Branches & Merging', desc: 'Create branches for every new thing you try. Merge them back. Deliberately cause a merge conflict and resolve it. Learn git log --graph to visualize history.', duration: '3–5 days', tags: ['git branch', 'git merge', 'git rebase', 'conflicts'] },
+  { num: '04', title: 'GitHub Basics', desc: 'Create a GitHub account, push your local repo, clone something from GitHub, explore the UI. Add a README with markdown. Understand origin.', duration: '2–3 days', tags: ['git push', 'git pull', 'git clone', 'origin'] },
+  { num: '05', title: 'Pull Requests', desc: 'Contribute to any open source project (even just fixing a typo in a README). Go through the full fork → branch → PR flow. This is the real-world skill.', duration: '1 week', tags: ['fork', 'PR', 'code review', 'merge'] },
+  { num: '06', title: 'Team Workflow', desc: 'Work with at least one other person on the same repo. Experience real merge conflicts, PR reviews, and branch management. Set up .gitignore properly.', duration: 'ongoing', tags: ['.gitignore', 'issues', 'reviews', 'team'] },
+  { num: '07', title: 'GitHub Actions', desc: 'Add a simple CI workflow that runs tests on every PR. This makes you a 10x developer — automated quality gates mean you ship with confidence.', duration: '2–3 days', tags: ['Actions', 'CI/CD', 'YAML', 'automation'] },
+];
+
+const cheatsheet = [
+  { section: 'Setup', items: [
+    { cmd: 'git init', what: 'Start a new git repo in current folder' },
+    { cmd: 'git clone <url>', what: 'Download a repo from GitHub' },
+    { cmd: 'git config --global user.name "Name"', what: 'Set your name for commits' },
+  ]},
+  { section: 'Daily Work', items: [
+    { cmd: 'git status', what: 'See what\'s changed (use constantly)' },
+    { cmd: 'git add .', what: 'Stage all changes for commit' },
+    { cmd: 'git add -p', what: 'Interactively choose lines to stage' },
+    { cmd: 'git commit -m "message"', what: 'Create a snapshot with a message' },
+    { cmd: 'git diff', what: 'See unstaged changes' },
+    { cmd: 'git diff --staged', what: 'See staged changes (about to commit)' },
+    { cmd: 'git log --oneline', what: 'See commit history, compact' },
+  ]},
+  { section: 'Branches', items: [
+    { cmd: 'git switch -c feature/name', what: 'Create + switch to new branch' },
+    { cmd: 'git switch main', what: 'Go back to main branch' },
+    { cmd: 'git branch -a', what: 'See all branches' },
+    { cmd: 'git merge feature/name', what: 'Merge branch into current branch' },
+    { cmd: 'git rebase main', what: 'Replay your commits on top of main' },
+    { cmd: 'git branch -d feature/name', what: 'Delete a branch (after merge)' },
+  ]},
+  { section: 'Remote / GitHub', items: [
+    { cmd: 'git push origin main', what: 'Upload commits to GitHub' },
+    { cmd: 'git pull origin main', what: 'Download + merge changes from GitHub' },
+    { cmd: 'git fetch origin', what: 'Download changes without merging' },
+    { cmd: 'git remote -v', what: 'See remote URLs' },
+  ]},
+  { section: 'Undo / Fix', items: [
+    { cmd: 'git restore filename', what: 'Discard changes in working directory' },
+    { cmd: 'git restore --staged filename', what: 'Unstage a file (undo add)' },
+    { cmd: 'git commit --amend', what: 'Fix last commit message or add forgot files' },
+    { cmd: 'git revert HEAD', what: 'Undo last commit (safe, makes new commit)' },
+    { cmd: 'git stash', what: 'Save dirty state, clean working dir' },
+    { cmd: 'git stash pop', what: 'Restore stashed changes' },
+  ]},
+];
+
+// ── Render ──
+function renderConcepts() {
+  const layers = { foundation: [], local: [], branching: [], remote: [], team: [] };
+  Object.entries(concepts).forEach(([k, c]) => layers[c.layer]?.push([k, c]));
+  
+  const maps = { foundation: 'layer-foundation', local: 'layer-local', branching: 'layer-branching', remote: 'layer-remote', team: 'layer-team' };
+  Object.entries(maps).forEach(([layer, id]) => {
+    const grid = document.getElementById(id);
+    layers[layer].forEach(([key, c]) => {
+      const done = JSON.parse(localStorage.getItem('git-done') || '[]').includes(key);
+      const card = document.createElement('div');
+      card.className = 'c-card' + (done ? ' done' : '');
+      card.id = 'cc-' + key;
+      card.style.setProperty('--card-accent', c.badge === 'badge-git' ? 'var(--green)' : c.badge === 'badge-github' ? 'var(--blue)' : c.badge === 'badge-team' ? '#ce93d8' : 'var(--red)');
+      card.innerHTML = `<div class="c-icon">${c.icon}</div><div class="c-title">${c.title}</div><div class="c-desc">${c.desc}</div><span class="c-badge ${c.badge}">${c.badgeText}</span>`;
+      card.onclick = () => openDetail(key);
+      grid.appendChild(card);
+    });
+  });
+}
+
+function openDetail(key) {
+  const c = concepts[key];
+  const zone = document.getElementById('detail-zone');
+  const done = JSON.parse(localStorage.getItem('git-done') || '[]').includes(key);
+  zone.innerHTML = `
+    <div class="detail">
+      <div class="detail-header">
+        <div class="detail-title-row"><span style="font-size:24px">${c.icon}</span><span class="detail-title">${c.title}</span></div>
+        <button class="detail-close" onclick="document.getElementById('detail-zone').innerHTML=''">✕</button>
+      </div>
+      <div class="detail-grid">
+        <div class="d-block analogy-block">
+          <h4>// THE ANALOGY</h4>
+          <p>${c.analogy}</p>
+        </div>
+        <div class="d-block">
+          <h4>// THE INTUITION</h4>
+          <p>${c.intuition}</p>
+        </div>
+        <div class="d-block d-full">
+          <h4>// THE COMMANDS</h4>
+          <div class="code-block"><pre>${c.code.split('\n').map(l => l.startsWith('#') ? `<span class="comment">${l}</span>` : l ? `<span class="cmd-line">${l}</span>` : '').join('\n')}</pre></div>
+        </div>
+        <div class="d-block d-full">
+          <h4>// WHAT'S HAPPENING</h4>
+          <div class="flow-diagram">${c.flow.map((s,i) => `<span class="flow-step${i===Math.floor(c.flow.length/2)?' active-step':''}">${s}</span>${i<c.flow.length-1?'<span class="flow-arrow">→</span>':''}`).join('')}</div>
+        </div>
+        <div class="d-block d-full" style="background: rgba(57,255,20,0.04); border-color: rgba(57,255,20,0.2);">
+          <h4>// WHY THIS MATTERS</h4>
+          <p>${c.paperUse}</p>
+        </div>
+      </div>
+      <button class="mark-btn" onclick="markDone('${key}', this)">${done ? '✓ Learned (click to undo)' : 'Mark as Learned ✓'}</button>
+    </div>
+  `;
+  zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function markDone(key, btn) {
+  const done = JSON.parse(localStorage.getItem('git-done') || '[]');
+  if (done.includes(key)) { done.splice(done.indexOf(key), 1); btn.textContent = 'Mark as Learned ✓'; }
+  else { done.push(key); btn.textContent = '✓ Learned (click to undo)'; }
+  localStorage.setItem('git-done', JSON.stringify(done));
+  const card = document.getElementById('cc-' + key);
+  if (card) card.className = 'c-card' + (done.includes(key) ? ' done' : '');
+  updateProgress();
+}
+
+function updateProgress() {
+  const done = JSON.parse(localStorage.getItem('git-done') || '[]');
+  const total = Object.keys(concepts).length;
+  const pct = Math.round(done.length / total * 100);
+  const bar = document.getElementById('prog-bar');
+  const lbl = document.getElementById('prog-label');
+  if (bar) bar.style.width = pct + '%';
+  if (lbl) lbl.textContent = `${done.length} / ${total} concepts learned — ${pct}%${pct >= 100 ? ' 🟢 ready to collaborate' : ''}`;
+}
+
+function renderWorkflow() {
+  const steps = document.getElementById('wf-steps');
+  workflowSteps.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'wf-step';
+    el.innerHTML = `<div class="s-num">STEP ${s.step}</div><div class="s-cmd">${s.cmd}</div><div class="s-label">${s.label}</div>`;
+    el.onclick = () => {
+      document.getElementById('wf-detail').innerHTML = `
+        <div class="detail" style="margin-top:16px">
+          <div class="detail-title" style="margin-bottom:12px">STEP ${s.step}: ${s.cmd}</div>
+          <div class="detail-grid">
+            <div class="d-block"><h4>// WHAT THIS DOES</h4><p>${s.explain}</p></div>
+            <div class="d-block"><h4>// THE COMMAND</h4><div class="code-block"><pre>${s.code.split('\n').map(l => l.startsWith('#')?`<span class="comment">${l}</span>`:l?`<span class="cmd-line">${l}</span>`:'').join('\n')}</pre></div></div>
+          </div>
+        </div>`;
+    };
+    steps.appendChild(el);
+  });
+}
+
+function renderPath() {
+  const list = document.getElementById('path-list');
+  learningPath.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'path-item';
+    el.innerHTML = `
+      <div class="path-num">${p.num}</div>
+      <div>
+        <h4>${p.title}</h4>
+        <p>${p.desc}</p>
+        <div class="path-tags">${p.tags.map(t=>`<span class="path-tag">${t}</span>`).join('')}</div>
+      </div>
+      <div class="path-dur">${p.duration}</div>`;
+    list.appendChild(el);
+  });
+  updateProgress();
+}
+
+function renderCheatsheet() {
+  const c = document.getElementById('cheat-content');
+  cheatsheet.forEach(section => {
+    c.innerHTML += `
+      <div class="cheat-section">
+        <h3>// ${section.section}</h3>
+        <div class="cheat-grid">
+          ${section.items.map(i => `<div class="cheat-row"><span class="cheat-cmd">${i.cmd}</span><span class="cheat-what">${i.what}</span></div>`).join('')}
+        </div>
+      </div>`;
+  });
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+renderConcepts();
+renderWorkflow();
+renderPath();
+renderCheatsheet();
+const done = JSON.parse(localStorage.getItem('git-done') || '[]');
+done.forEach(key => { const c = document.getElementById('cc-'+key); if (c) c.classList.add('done'); });
+</script>
+</body>
+</html>
